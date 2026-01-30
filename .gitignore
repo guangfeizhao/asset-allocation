@@ -1,0 +1,6 @@
+.DS_Store
+Thumbs.db
+*.log
+.claude/
+create-icons.ps1
+generate-icons.html
