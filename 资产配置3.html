@@ -1,2719 +1,1566 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>资产配置</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4F46E5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#667eea">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <title>高级资产配置计算器</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // 注册 Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW registered'))
-                    .catch(err => console.log('SW registration failed'));
-            });
-        }
-    </script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
-        
+
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #818CF8;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-400: #9CA3AF;
+            --gray-500: #6B7280;
+            --gray-600: #4B5563;
+            --gray-700: #374151;
+            --gray-800: #1F2937;
+            --gray-900: #111827;
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gray-100);
+            color: var(--gray-800);
+            line-height: 1.5;
             min-height: 100vh;
-            padding: 20px;
+            padding-bottom: calc(70px + var(--safe-bottom));
         }
-        
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-        
+
+        /* 顶部导航 */
         .header {
-            text-align: center;
-            margin-bottom: 30px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             color: white;
-        }
-        
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-        
-        .card {
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
-        
-        .card-title {
-            font-size: 1.3rem;
-            color: #333;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #667eea;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .card-title .title-right {
-            margin-left: auto;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .view-tabs {
-            display: flex;
-            gap: 5px;
-            background: #f0f0f0;
-            padding: 4px;
-            border-radius: 10px;
-        }
-        
-        .view-tab {
-            padding: 8px 16px;
-            border: none;
-            background: transparent;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s;
-            color: #666;
-        }
-        
-        .view-tab.active {
-            background: white;
-            color: #667eea;
-            font-weight: 600;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .view-tab:hover:not(.active) {
-            color: #333;
-        }
-        
-        .date-selector {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        
-        .date-selector select {
-            padding: 8px 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            cursor: pointer;
-        }
-        
-        .date-selector select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .current-badge {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-        
-        .input-section {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            align-items: flex-end;
-        }
-        
-        .input-group {
-            flex: 1;
-            min-width: 150px;
-        }
-        
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 500;
-        }
-        
-        .input-group input, .input-group select {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.3s;
-        }
-        
-        .input-group input:focus, .input-group select:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-        }
-        
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-        
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-        }
-        
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            color: white;
-        }
-        
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(17, 153, 142, 0.4);
-        }
-        
-        .btn-warning {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-        }
-        
-        .entry-panel {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: 2px solid #f59e0b;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .entry-panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        
-        .entry-panel-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #92400e;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .entry-date-selector {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .entry-date-selector label {
-            color: #92400e;
-            font-weight: 500;
-        }
-        
-        .entry-date-selector select {
-            padding: 8px 12px;
-            border: 2px solid #f59e0b;
-            border-radius: 8px;
-            background: white;
-            font-size: 0.9rem;
-        }
-        
-        .entry-hint {
-            font-size: 0.85rem;
-            color: #b45309;
-            margin-top: 10px;
-            padding: 10px;
-            background: rgba(255,255,255,0.5);
-            border-radius: 8px;
-        }
-        
-        .color-legend {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 12px;
-            margin-bottom: 20px;
-        }
-        
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.85rem;
-            color: #666;
-        }
-        
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            border: 1px solid rgba(0,0,0,0.1);
-        }
-        
-        .table-container {
-            overflow-x: auto;
-            margin: -10px;
-            padding: 10px;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 1100px;
-        }
-        
-        th, td {
-            padding: 12px 8px;
-            text-align: center;
-            border-bottom: 1px solid #eee;
-            white-space: nowrap;
-            font-size: 0.9rem;
-        }
-        
-        th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            font-weight: 500;
+            padding: 16px 16px 20px;
             position: sticky;
             top: 0;
-            z-index: 10;
+            z-index: 100;
         }
-        
-        th:first-child { border-radius: 10px 0 0 0; }
-        th:last-child { border-radius: 0 10px 0 0; }
-        
-        tr.account-cash {
-            background: linear-gradient(90deg, #f0fdf4 0%, #fafafa 100%);
-            border-left: 3px solid #86efac;
-        }
-        tr.account-cash:hover { background: linear-gradient(90deg, #dcfce7 0%, #f5f5f5 100%); }
-        
-        tr.account-safe {
-            background: linear-gradient(90deg, #eff6ff 0%, #fafafa 100%);
-            border-left: 3px solid #93c5fd;
-        }
-        tr.account-safe:hover { background: linear-gradient(90deg, #dbeafe 0%, #f5f5f5 100%); }
-        
-        tr.account-risk {
-            background: linear-gradient(90deg, #fef3c7 0%, #fafafa 100%);
-            border-left: 3px solid #fcd34d;
-        }
-        tr.account-risk:hover { background: linear-gradient(90deg, #fde68a 0%, #f5f5f5 100%); }
-        
-        tr.account-speculative {
-            background: linear-gradient(90deg, #fee2e2 0%, #fafafa 100%);
-            border-left: 3px solid #fca5a5;
-        }
-        tr.account-speculative:hover { background: linear-gradient(90deg, #fecaca 0%, #f5f5f5 100%); }
-        
-        tr.account-insurance {
-            background: linear-gradient(90deg, #f3e8ff 0%, #fafafa 100%);
-            border-left: 3px solid #c4b5fd;
-        }
-        tr.account-insurance:hover { background: linear-gradient(90deg, #e9d5ff 0%, #f5f5f5 100%); }
-        
-        tr.account-other {
-            background: linear-gradient(90deg, #f1f5f9 0%, #fafafa 100%);
-            border-left: 3px solid #cbd5e1;
-        }
-        tr.account-other:hover { background: linear-gradient(90deg, #e2e8f0 0%, #f5f5f5 100%); }
-        
-        tr.total-row {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%) !important;
+
+        .header-title {
+            font-size: 20px;
             font-weight: 600;
-            border-left: none !important;
+            text-align: center;
         }
-        
-        .level-indent {
+
+        .header-subtitle {
+            font-size: 12px;
+            text-align: center;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        /* 月份选择器 */
+        .month-selector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .month-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .month-btn:active {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .month-display {
+            font-size: 16px;
+            font-weight: 500;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        /* 页面容器 */
+        .page {
+            display: none;
+            padding: 16px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 总资产卡片 */
+        .total-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .total-label {
+            font-size: 14px;
+            color: var(--gray-500);
+        }
+
+        .total-amount {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin: 8px 0;
+        }
+
+        .total-change {
             display: inline-flex;
             align-items: center;
             gap: 4px;
+            font-size: 14px;
+            padding: 4px 10px;
+            border-radius: 20px;
         }
-        
-        .level-indent .indent {
-            color: #9ca3af;
-            margin-right: 4px;
-            font-family: monospace;
-        }
-        
-        .level-badge {
-            display: inline-block;
-            padding: 2px 6px;
-            background: rgba(102, 126, 234, 0.15);
-            color: #667eea;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            margin-left: 6px;
-            font-weight: 500;
-        }
-        
-        .editable {
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 6px;
-            transition: all 0.2s;
-            display: inline-block;
-            min-width: 50px;
-        }
-        
-        .editable:hover { transform: scale(1.02); }
-        
-        .editable.text-type {
-            background: rgba(168, 85, 247, 0.12);
-            color: #7c3aed;
-        }
-        .editable.text-type:hover { background: rgba(168, 85, 247, 0.2); }
-        
-        .editable.number-type {
-            background: rgba(59, 130, 246, 0.12);
-            color: #2563eb;
-        }
-        .editable.number-type:hover { background: rgba(59, 130, 246, 0.2); }
-        
-        .editable.amount-type {
-            background: rgba(16, 185, 129, 0.12);
+
+        .total-change.positive {
+            background: #D1FAE5;
             color: #059669;
         }
-        .editable.amount-type:hover { background: rgba(16, 185, 129, 0.2); }
-        
-        .editable.flow-type {
-            background: rgba(245, 158, 11, 0.12);
-            color: #d97706;
+
+        .total-change.negative {
+            background: #FEE2E2;
+            color: #DC2626;
         }
-        .editable.flow-type:hover { background: rgba(245, 158, 11, 0.2); }
-        
-        .editable.profit-positive {
-            background: rgba(220, 38, 38, 0.12);
-            color: #dc2626;
+
+        /* 资产分布概览 */
+        .distribution-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
         }
-        .editable.profit-positive:hover { background: rgba(220, 38, 38, 0.2); }
-        
-        .editable.profit-negative {
-            background: rgba(22, 163, 74, 0.12);
-            color: #16a34a;
-        }
-        .editable.profit-negative:hover { background: rgba(22, 163, 74, 0.2); }
-        
-        .editable.editing {
-            padding: 0;
-            background: white;
-            box-shadow: 0 0 0 3px #667eea;
-        }
-        
-        .editable.editing input {
-            width: 100%;
-            min-width: 60px;
-            padding: 4px 8px;
-            border: none;
-            border-radius: 6px;
-            font-size: inherit;
+
+        .distribution-item {
+            flex: 1;
             text-align: center;
-            outline: none;
-        }
-        
-        .placeholder-text {
-            color: #9ca3af;
-            font-style: italic;
-        }
-        
-        .profit-positive { color: #dc2626; font-weight: 600; }
-        .profit-negative { color: #16a34a; font-weight: 600; }
-        .profit-zero { color: #666; }
-        
-        .action-buttons {
-            display: flex;
-            gap: 4px;
-            justify-content: center;
-        }
-        
-        .btn-icon {
-            width: 28px;
-            height: 28px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            font-size: 0.8rem;
-        }
-        
-        .btn-add-child {
-            background: rgba(34, 197, 94, 0.15);
-            color: #16a34a;
-        }
-        .btn-add-child:hover { background: rgba(34, 197, 94, 0.25); transform: scale(1.1); }
-        
-        .btn-delete {
-            background: rgba(239, 68, 68, 0.12);
-            color: #dc2626;
-        }
-        .btn-delete:hover { background: rgba(239, 68, 68, 0.2); transform: scale(1.1); }
-        
-        .stats-filter {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            align-items: center;
-            padding: 15px 20px;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ed 100%);
+            padding: 12px 8px;
+            background: var(--gray-50);
             border-radius: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #e0e0e0;
-        }
-        
-        .filter-label {
-            font-weight: 600;
-            color: #555;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .filter-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .filter-item label {
-            color: #666;
-            font-size: 0.9rem;
-            white-space: nowrap;
-        }
-        
-        .filter-item select, .filter-item input {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            background: white;
-        }
-        
-        .filter-item select:focus, .filter-item input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .filter-mode {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .filter-mode button {
-            padding: 6px 14px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            background: white;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: all 0.2s;
-        }
-        
-        .filter-mode button.active {
-            border-color: #667eea;
-            background: #667eea;
-            color: white;
-        }
-        
-        .filter-mode button:hover:not(.active) {
-            border-color: #667eea;
-        }
-        
-        .date-tag {
-            display: inline-block;
-            padding: 4px 10px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            margin-left: auto;
-        }
-        
-        .analysis-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-        }
-        
-        @media (max-width: 1000px) {
-            .analysis-grid { grid-template-columns: 1fr; }
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 300px;
-        }
-        
-        .chart-container-large {
-            position: relative;
-            height: 350px;
-        }
-        
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-        }
-        
-        .metric-card {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
-            border-radius: 15px;
-            padding: 18px;
-            text-align: center;
-        }
-        
-        .metric-card.highlight {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .metric-card.highlight .metric-label { color: rgba(255,255,255,0.8); }
-        .metric-card.highlight .metric-value { color: white !important; }
-        .metric-card.highlight .metric-detail { color: rgba(255,255,255,0.7); }
-
-        .target-config {
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-            border: 2px solid #0ea5e9;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
         }
 
-        .target-config-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .target-config-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #0369a1;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .target-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-        }
-
-        .target-item {
-            background: white;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        .target-item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .target-item-name {
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: #333;
-        }
-
-        .target-item-input {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .target-item-input input {
-            width: 60px;
-            padding: 6px 8px;
-            border: 2px solid #e0e0e0;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            text-align: center;
-        }
-
-        .target-item-input input:focus {
-            outline: none;
-            border-color: #0ea5e9;
-        }
-
-        .target-bar {
-            height: 8px;
-            background: #e5e7eb;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 8px;
-        }
-
-        .target-bar-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-
-        .target-bar-fill.under { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
-        .target-bar-fill.match { background: linear-gradient(90deg, #34d399, #10b981); }
-        .target-bar-fill.over { background: linear-gradient(90deg, #f87171, #ef4444); }
-
-        .target-stats {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-        }
-
-        .target-actual { color: #6b7280; }
-        .target-diff { font-weight: 600; }
-        .target-diff.under { color: #f59e0b; }
-        .target-diff.match { color: #10b981; }
-        .target-diff.over { color: #ef4444; }
-
-        .storage-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.85rem;
-            color: #666;
-        }
-
-        .storage-dot {
+        .distribution-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #10b981;
+            display: inline-block;
+            margin-bottom: 6px;
         }
 
-        .storage-dot.unsaved { background: #f59e0b; }
+        .distribution-name {
+            font-size: 11px;
+            color: var(--gray-500);
+            display: block;
+        }
 
-        .validation-warning {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 8px;
-            padding: 10px 15px;
-            margin-top: 10px;
-            font-size: 0.85rem;
-            color: #92400e;
+        .distribution-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-800);
+            display: block;
+            margin-top: 2px;
+        }
+
+        .distribution-percent {
+            font-size: 11px;
+            color: var(--gray-400);
+        }
+
+        /* 资产列表 */
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: space-between;
         }
 
-        .rate-tooltip {
-            position: relative;
-            cursor: help;
+        .section-action {
+            font-size: 13px;
+            color: var(--primary);
+            font-weight: 500;
         }
 
-        .rate-tooltip:hover::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #333;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            white-space: nowrap;
-            z-index: 100;
+        .asset-group {
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
-        
-        .metric-icon { font-size: 1.3rem; margin-bottom: 6px; }
-        .metric-label { font-size: 0.85rem; color: #666; margin-bottom: 4px; }
-        .metric-value { font-size: 1.6rem; font-weight: 700; }
-        .metric-value.green { color: #16a34a; }
-        .metric-value.red { color: #dc2626; }
-        .metric-value.blue { color: #2563eb; }
-        .metric-detail { font-size: 0.8rem; color: #888; margin-top: 4px; }
-        
-        .monthly-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+
+        .asset-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background: var(--gray-50);
+            cursor: pointer;
+        }
+
+        .asset-group-left {
+            display: flex;
+            align-items: center;
             gap: 10px;
-            margin-top: 15px;
         }
-        
-        .month-card {
-            background: #f8f9fa;
+
+        .asset-group-icon {
+            width: 36px;
+            height: 36px;
             border-radius: 10px;
-            padding: 12px 8px;
-            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .asset-group-info h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .asset-group-info span {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .asset-group-right {
+            text-align: right;
+        }
+
+        .asset-group-amount {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .asset-group-arrow {
+            color: var(--gray-400);
+            transition: transform 0.3s;
+            margin-left: 8px;
+        }
+
+        .asset-group.expanded .asset-group-arrow {
+            transform: rotate(180deg);
+        }
+
+        .asset-group-items {
+            display: none;
+        }
+
+        .asset-group.expanded .asset-group-items {
+            display: block;
+        }
+
+        .asset-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border-top: 1px solid var(--gray-100);
+        }
+
+        .asset-item-name {
+            font-size: 14px;
+            color: var(--gray-700);
+        }
+
+        .asset-item-tag {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+        }
+
+        .asset-item-amount {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--gray-800);
+        }
+
+        /* 底部导航 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            padding-bottom: calc(8px + var(--safe-bottom));
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 6px 16px;
+            color: var(--gray-400);
+            text-decoration: none;
+            transition: color 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-icon {
+            font-size: 22px;
+            margin-bottom: 2px;
+        }
+
+        .nav-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        /* 录入页面 */
+        .input-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .input-row:last-child {
+            border-bottom: none;
+        }
+
+        .input-label {
+            flex: 1;
+            font-size: 14px;
+            color: var(--gray-700);
+        }
+
+        .input-field {
+            width: 140px;
+            padding: 10px 12px;
+            border: 1px solid var(--gray-200);
+            border-radius: 10px;
+            font-size: 16px;
+            text-align: right;
+            background: var(--gray-50);
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+        }
+
+        /* 按钮 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
             cursor: pointer;
             transition: all 0.2s;
-            border: 2px solid transparent;
         }
-        
-        .month-card:hover { background: #e9ecef; }
-        .month-card.active { border-color: #667eea; background: #eff6ff; }
-        .month-card .month-name { font-size: 0.8rem; color: #666; margin-bottom: 4px; }
-        .month-card .month-value { font-size: 1rem; font-weight: 600; }
-        .month-card .month-value.positive { color: #dc2626; }
-        .month-card .month-value.negative { color: #16a34a; }
-        
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:active {
+            background: #4338CA;
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 8px;
+        }
+
+        /* 图表容器 */
+        .chart-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .chart-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 12px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+        }
+
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-top: 4px;
+        }
+
+        .stat-value.positive { color: var(--success); }
+        .stat-value.negative { color: var(--danger); }
+
+        /* 目标配置 */
+        .target-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .target-item:last-child {
+            border-bottom: none;
+        }
+
+        .target-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            margin-right: 10px;
+        }
+
+        .target-name {
+            flex: 1;
+            font-size: 14px;
+            color: var(--gray-700);
+        }
+
+        .target-values {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .target-current {
+            font-size: 14px;
+            color: var(--gray-500);
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .target-input {
+            width: 70px;
+            padding: 8px 10px;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .target-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            height: 6px;
+            background: var(--gray-200);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        /* 模态框 */
         .modal-overlay {
             display: none;
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            right: 0;
+            bottom: 0;
             background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
+            z-index: 2000;
+            align-items: flex-end;
             justify-content: center;
-            padding: 20px;
         }
-        
-        .modal-overlay.active { display: flex; }
-        
-        .modal {
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
             background: white;
-            border-radius: 20px;
-            padding: 30px;
-            max-width: 600px;
+            border-radius: 20px 20px 0 0;
             width: 100%;
-            max-height: 90vh;
+            max-height: 80vh;
             overflow-y: auto;
-            animation: modalSlideIn 0.3s ease;
+            animation: slideUp 0.3s ease;
         }
-        
-        @keyframes modalSlideIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
         }
-        
+
         .modal-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--gray-100);
+            position: sticky;
+            top: 0;
+            background: white;
         }
-        
-        .modal-header h3 { font-size: 1.4rem; color: #333; }
-        
+
+        .modal-title {
+            font-size: 17px;
+            font-weight: 600;
+        }
+
         .modal-close {
-            width: 36px;
-            height: 36px;
-            border: none;
-            background: #f0f0f0;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
+            border: none;
+            background: var(--gray-100);
+            font-size: 18px;
             cursor: pointer;
-            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-700);
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--gray-200);
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--gray-200);
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+        }
+
+        /* 设置页面 */
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background: white;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .setting-item:first-child {
+            border-radius: 12px 12px 0 0;
+        }
+
+        .setting-item:last-child {
+            border-radius: 0 0 12px 12px;
+            border-bottom: none;
+        }
+
+        .setting-label {
+            font-size: 15px;
+            color: var(--gray-700);
+        }
+
+        .setting-value {
+            font-size: 14px;
+            color: var(--gray-400);
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray-400);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        /* 快捷操作 */
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .quick-action {
+            flex-shrink: 0;
+            padding: 10px 16px;
+            background: white;
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--gray-600);
+            border: 1px solid var(--gray-200);
+            cursor: pointer;
             transition: all 0.2s;
         }
-        
-        .modal-close:hover { background: #e0e0e0; transform: rotate(90deg); }
-        
-        .parent-info {
-            background: #eff6ff;
-            padding: 12px 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            color: #2563eb;
-            font-size: 0.95rem;
-            border-left: 3px solid #3b82f6;
+
+        .quick-action.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
         }
-        
-        .form-group { margin-bottom: 18px; }
-        .form-group label { display: block; margin-bottom: 6px; color: #555; font-weight: 500; }
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.3s;
-        }
-        .form-group input:focus, .form-group select:focus { outline: none; border-color: #667eea; }
-        
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        
-        .form-row-3 {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 15px;
-        }
-        
-        .modal-actions {
-            display: flex;
-            gap: 15px;
-            margin-top: 25px;
-        }
-        
-        .modal-actions button {
-            flex: 1;
-            padding: 14px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
+
+        /* Toast提示 */
         .toast {
             position: fixed;
-            bottom: 30px;
+            top: 50%;
             left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: #333;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
             color: white;
-            padding: 15px 30px;
-            border-radius: 10px;
-            z-index: 2000;
-            opacity: 0;
-            transition: all 0.3s;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 3000;
+            display: none;
         }
-        
-        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-        .toast.success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
-        .toast.error { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
-        
-        @media (max-width: 768px) {
-            .header h1 { font-size: 1.8rem; }
-            .card { padding: 15px; }
-            .input-section { flex-direction: column; }
-            .btn { width: 100%; justify-content: center; }
-            .form-row, .form-row-3 { grid-template-columns: 1fr; }
-            th, td { padding: 8px 4px; font-size: 0.8rem; }
-            .card-title { flex-direction: column; gap: 15px; }
-            .card-title .title-right { margin-left: 0; flex-direction: column; width: 100%; }
-            .stats-filter { flex-direction: column; align-items: stretch; }
+
+        .toast.show {
+            display: block;
+            animation: toastIn 0.3s ease;
         }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* 颜色定义 */
+        .bg-blue { background: #DBEAFE; }
+        .bg-green { background: #D1FAE5; }
+        .bg-yellow { background: #FEF3C7; }
+        .bg-red { background: #FEE2E2; }
+        .bg-purple { background: #EDE9FE; }
+
+        .text-blue { color: #2563EB; }
+        .text-green { color: #059669; }
+        .text-yellow { color: #D97706; }
+        .text-red { color: #DC2626; }
+        .text-purple { color: #7C3AED; }
+
+        .dot-blue { background: #3B82F6; }
+        .dot-green { background: #10B981; }
+        .dot-yellow { background: #F59E0B; }
+        .dot-red { background: #EF4444; }
+        .dot-purple { background: #8B5CF6; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📊 高级资产配置计算器</h1>
-            <p>支持多层级配置 · 月度资金变动追踪 · 收益精确记录</p>
+    <!-- 顶部导航 -->
+    <div class="header">
+        <div class="header-title">资产配置</div>
+        <div class="header-subtitle" id="headerSubtitle">家庭资产管理</div>
+        <div class="month-selector">
+            <button class="month-btn" onclick="changeMonth(-1)">‹</button>
+            <span class="month-display" id="monthDisplay">2025年1月</span>
+            <button class="month-btn" onclick="changeMonth(1)">›</button>
         </div>
-        
-        <div class="card">
-            <div class="input-section">
-                <div class="input-group">
-                    <label>初始总资产 (¥)</label>
-                    <input type="number" id="initialAsset" value="5000000" oninput="recalculate()">
-                </div>
-                <div class="input-group">
-                    <label>起始年月</label>
-                    <div style="display: flex; gap: 8px;">
-                        <select id="startYear" onchange="recalculate()" style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px;">
-                            <option value="2023">2023年</option>
-                            <option value="2024">2024年</option>
-                            <option value="2025" selected>2025年</option>
-                            <option value="2026">2026年</option>
-                        </select>
-                        <select id="startMonth" onchange="recalculate()" style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px;">
-                            <option value="1" selected>1月</option>
-                            <option value="2">2月</option>
-                            <option value="3">3月</option>
-                            <option value="4">4月</option>
-                            <option value="5">5月</option>
-                            <option value="6">6月</option>
-                            <option value="7">7月</option>
-                            <option value="8">8月</option>
-                            <option value="9">9月</option>
-                            <option value="10">10月</option>
-                            <option value="11">11月</option>
-                            <option value="12">12月</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label>当前总资产</label>
-                    <div style="padding: 12px 15px; background: #f0f0f0; border-radius: 10px; font-size: 1.2rem; font-weight: 600; color: #667eea;" id="currentTotalDisplay">
-                        ¥5,000,000
-                    </div>
-                </div>
-                <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="resetAll()">🔄 重置</button>
-                    <button class="btn btn-success" onclick="exportData()">📥 导出</button>
-                    <button class="btn btn-primary" onclick="importData()">📤 导入</button>
-                </div>
-                <div class="storage-status">
-                    <span class="storage-dot" id="storageDot"></span>
-                    <span id="storageText">已自动保存</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card">
-            <div class="card-title">
-                📋 资产配置明细表
-                <div class="title-right">
-                    <div class="view-tabs">
-                        <button class="view-tab active" id="tabCurrent" onclick="switchView('current')">现状</button>
-                        <button class="view-tab" id="tabHistory" onclick="switchView('history')">历史月份</button>
-                        <button class="view-tab" id="tabEntry" onclick="switchView('entry')">录入数据</button>
-                    </div>
-                    <div class="date-selector" id="historyDateSelector" style="display: none;">
-                        <select id="viewYear" onchange="renderTable()">
-                            <option value="2024">2024年</option>
-                            <option value="2025" selected="">2025年</option>
-                            <option value="2026">2026年</option>
-                        </select>
-                        <select id="viewMonth" onchange="renderTable()">
-                            <option value="1">1月</option>
-                            <option value="2">2月</option>
-                            <option value="3">3月</option>
-                            <option value="4">4月</option>
-                            <option value="5">5月</option>
-                            <option value="6">6月</option>
-                            <option value="7">7月</option>
-                            <option value="8">8月</option>
-                            <option value="9">9月</option>
-                            <option value="10">10月</option>
-                            <option value="11">11月</option>
-                            <option value="12">12月</option>
-                        </select>
-                    </div>
-                    <span class="current-badge" id="viewBadge">当前持仓</span>
-                    <button class="btn btn-primary" onclick="openModal(null)">➕ 添加科目</button>
-                </div>
-            </div>
-            
-            <div class="entry-panel" id="entryPanel" style="display: none;">
-                <div class="entry-panel-header">
-                    <div class="entry-panel-title">✏️ 数据录入模式</div>
-                    <div class="entry-date-selector">
-                        <label>录入月份：</label>
-                        <select id="entryYear">
-                            <option value="2024">2024年</option>
-                            <option value="2025" selected="">2025年</option>
-                            <option value="2026">2026年</option>
-                        </select>
-                        <select id="entryMonth">
-                            <option value="1">1月</option>
-                            <option value="2">2月</option>
-                            <option value="3">3月</option>
-                            <option value="4">4月</option>
-                            <option value="5">5月</option>
-                            <option value="6">6月</option>
-                            <option value="7">7月</option>
-                            <option value="8">8月</option>
-                            <option value="9">9月</option>
-                            <option value="10">10月</option>
-                            <option value="11">11月</option>
-                            <option value="12">12月</option>
-                        </select>
-                        <button class="btn btn-warning" onclick="applyEntryMonth()">应用</button>
-                    </div>
-                </div>
-                <div class="entry-hint">
-                    💡 在此模式下，可录入每个科目在指定月份的：<strong>资金变动</strong>（追加为正，赎回为负）和 <strong>当月收益</strong>（盈利为正，亏损为负）
-                </div>
-            </div>
-            
-            <div class="color-legend">
-                <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(90deg, #f0fdf4, #fafafa); border-left: 3px solid #86efac;"></div>
-                    <span>现金账户</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(90deg, #eff6ff, #fafafa); border-left: 3px solid #93c5fd;"></div>
-                    <span>安全账户</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(90deg, #fef3c7, #fafafa); border-left: 3px solid #fcd34d;"></div>
-                    <span>风险账户</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(90deg, #fee2e2, #fafafa); border-left: 3px solid #fca5a5;"></div>
-                    <span>投机账户</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(90deg, #f3e8ff, #fafafa); border-left: 3px solid #c4b5fd;"></div>
-                    <span>保险账户</span>
-                </div>
-            </div>
+    </div>
 
-            <div class="target-config" id="targetConfigPanel">
-                <div class="target-config-header">
-                    <div class="target-config-title">🎯 目标配置比例</div>
-                    <button class="btn btn-secondary" onclick="toggleTargetPanel()" style="padding: 6px 12px; font-size: 0.85rem;">
-                        <span id="targetToggleText">收起</span>
-                    </button>
-                </div>
-                <div id="targetGridContainer">
-                    <div class="target-grid" id="targetGrid"></div>
-                    <div id="validationWarnings"></div>
-                </div>
-            </div>
-            
-            <div class="table-container">
-                <table id="configTable">
-                    <thead id="tableHeader"></thead>
-                    <tbody id="tableBody"></tbody>
-                </table>
+    <!-- 概览页面 -->
+    <div class="page active" id="page-overview">
+        <div class="total-card">
+            <div class="total-label">总资产</div>
+            <div class="total-amount" id="totalAmount">¥0</div>
+            <span class="total-change positive" id="totalChange">
+                <span>↑</span>
+                <span id="changeValue">+¥0 (0%)</span>
+            </span>
+            <div class="distribution-row" id="distributionRow">
+                <!-- 动态生成 -->
             </div>
         </div>
-        
-        <div class="card">
-            <div class="card-title">📈 收益统计分析</div>
-            
-            <div class="stats-filter">
-                <span class="filter-label">📅 统计范围</span>
-                
-                <div class="filter-item">
-                    <label>年份：</label>
-                    <select id="statsYear" onchange="updateStats()">
-                        <option value="2024">2024年</option>
-                        <option value="2025" selected="">2025年</option>
-                        <option value="2026">2026年</option>
-                    </select>
-                </div>
-                
-                <div class="filter-item">
-                    <label>范围：</label>
-                    <div class="filter-mode">
-                        <button id="statsModeSingle" onclick="setStatsMode('single')">单月</button>
-                        <button id="statsModeRange" onclick="setStatsMode('range')">范围</button>
-                        <button id="statsModeYear" class="active" onclick="setStatsMode('year')">全年</button>
-                    </div>
-                </div>
-                
-                <div class="filter-item" id="statsSingleGroup" style="display: none;">
-                    <label>月份：</label>
-                    <select id="statsMonth" onchange="updateStats()">
-                        <option value="1">1月</option>
-                        <option value="2">2月</option>
-                        <option value="3">3月</option>
-                        <option value="4">4月</option>
-                        <option value="5">5月</option>
-                        <option value="6">6月</option>
-                        <option value="7">7月</option>
-                        <option value="8">8月</option>
-                        <option value="9">9月</option>
-                        <option value="10">10月</option>
-                        <option value="11">11月</option>
-                        <option value="12">12月</option>
-                    </select>
-                </div>
-                
-                <div class="filter-item" id="statsRangeGroup" style="display: none;">
-                    <label>从：</label>
-                    <select id="statsStartMonth" onchange="updateStats()">
-                        <option value="1" selected="">1月</option>
-                        <option value="2">2月</option>
-                        <option value="3">3月</option>
-                        <option value="4">4月</option>
-                        <option value="5">5月</option>
-                        <option value="6">6月</option>
-                        <option value="7">7月</option>
-                        <option value="8">8月</option>
-                        <option value="9">9月</option>
-                        <option value="10">10月</option>
-                        <option value="11">11月</option>
-                        <option value="12">12月</option>
-                    </select>
-                    <label>至：</label>
-                    <select id="statsEndMonth" onchange="updateStats()">
-                        <option value="1">1月</option>
-                        <option value="2">2月</option>
-                        <option value="3">3月</option>
-                        <option value="4">4月</option>
-                        <option value="5">5月</option>
-                        <option value="6">6月</option>
-                        <option value="7">7月</option>
-                        <option value="8">8月</option>
-                        <option value="9">9月</option>
-                        <option value="10">10月</option>
-                        <option value="11">11月</option>
-                        <option value="12">12月</option>
-                    </select>
-                </div>
-                
-                <span class="date-tag" id="statsDateTag">2025年全年</span>
-            </div>
-            
-            <div class="chart-container-large">
-                <canvas id="barChart"></canvas>
-            </div>
-            
-            <div class="monthly-stats" id="monthlyStats"></div>
+
+        <div class="section-title">
+            <span>资产配置</span>
         </div>
-        
-        <div class="card">
-            <div class="card-title">📊 资产配置分析</div>
-            <div class="analysis-grid">
-                <div>
-                    <h4 style="margin-bottom: 15px; color: #555;">当前资产分布</h4>
-                    <div class="chart-container">
-                        <canvas id="pieChart"></canvas>
-                    </div>
-                </div>
-                <div>
-                    <div class="metrics-grid">
-                        <div class="metric-card highlight">
-                            <div class="metric-icon">💰</div>
-                            <div class="metric-label" id="periodProfitLabel">统计期收益</div>
-                            <div class="metric-value" id="periodProfit">¥0</div>
-                            <div class="metric-detail">
-                                <span class="rate-tooltip" data-tooltip="修正Dietz收益率：考虑资金流动时间的加权收益率">
-                                    收益率：<span id="periodRate">0%</span>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-icon">📅</div>
-                            <div class="metric-label">年度累计收益</div>
-                            <div class="metric-value" id="yearProfit" style="color: #333;">¥0</div>
-                            <div class="metric-detail">
-                                <span class="rate-tooltip" data-tooltip="修正Dietz年化收益率">
-                                    年收益率：<span id="yearRate">0%</span>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-icon">💵</div>
-                            <div class="metric-label">年度净流入</div>
-                            <div class="metric-value blue" id="yearFlow">¥0</div>
-                            <div class="metric-detail">追加 - 赎回</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-icon">📈</div>
-                            <div class="metric-label">资产增长</div>
-                            <div class="metric-value green" id="assetGrowth">0%</div>
-                            <div class="metric-detail">相比初始资产</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-icon">⚖️</div>
-                            <div class="metric-label">平均月收益</div>
-                            <div class="metric-value" id="avgMonthlyProfit" style="color: #d97706;">¥0</div>
-                            <div class="metric-detail">有数据月份平均</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-icon">📊</div>
-                            <div class="metric-label">最大单月收益</div>
-                            <div class="metric-value red" id="maxMonthlyProfit">¥0</div>
-                            <div class="metric-detail" id="maxMonthDetail">-</div>
-                        </div>
-                    </div>
-                </div>
+
+        <div id="assetGroups">
+            <!-- 动态生成资产分组 -->
+        </div>
+    </div>
+
+    <!-- 资产页面 -->
+    <div class="page" id="page-assets">
+        <div class="quick-actions" id="categoryFilter">
+            <div class="quick-action active" data-filter="all">全部</div>
+        </div>
+
+        <div id="assetList">
+            <!-- 动态生成资产列表 -->
+        </div>
+    </div>
+
+    <!-- 录入页面 -->
+    <div class="page" id="page-input">
+        <div class="input-card">
+            <div class="section-title" style="margin-bottom: 8px;">
+                <span>快速录入</span>
+                <span class="section-action" onclick="openAddModal()">+ 添加科目</span>
+            </div>
+            <div id="inputList">
+                <!-- 动态生成录入列表 -->
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveData()">
+            保存数据
+        </button>
+    </div>
+
+    <!-- 分析页面 -->
+    <div class="page" id="page-analysis">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">本月收益</div>
+                <div class="stat-value positive" id="monthProfit">+¥0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">收益率</div>
+                <div class="stat-value positive" id="monthRate">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">年化收益</div>
+                <div class="stat-value" id="yearProfit">¥0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">年化收益率</div>
+                <div class="stat-value" id="yearRate">0%</div>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-title">资产配置分布</div>
+            <div class="chart-container">
+                <canvas id="pieChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-title">资产趋势</div>
+            <div class="chart-container">
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-title">目标配置</div>
+            <div id="targetList">
+                <!-- 动态生成目标配置 -->
             </div>
         </div>
     </div>
-    
-    <div class="modal-overlay" id="modal">
-        <div class="modal">
+
+    <!-- 底部导航 -->
+    <div class="bottom-nav">
+        <div class="nav-item active" data-page="overview">
+            <span class="nav-icon">📊</span>
+            <span class="nav-label">概览</span>
+        </div>
+        <div class="nav-item" data-page="assets">
+            <span class="nav-icon">💰</span>
+            <span class="nav-label">资产</span>
+        </div>
+        <div class="nav-item" data-page="input">
+            <span class="nav-icon">✏️</span>
+            <span class="nav-label">录入</span>
+        </div>
+        <div class="nav-item" data-page="analysis">
+            <span class="nav-icon">📈</span>
+            <span class="nav-label">分析</span>
+        </div>
+    </div>
+
+    <!-- 添加科目模态框 -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalTitle">➕ 添加新科目</h3>
-                <button class="modal-close" onclick="closeModal()">×</button>
+                <span class="modal-title">添加科目</span>
+                <button class="modal-close" onclick="closeModal('addModal')">×</button>
             </div>
-            
-            <div class="parent-info" id="parentInfo" style="display: none;">
-                📁 父级科目：<span id="parentName"></span>
-            </div>
-            
-            <form id="configForm">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>账户类型</label>
-                        <select id="formAccountType">
-                            <option value="">自定义...</option>
-                            <option value="现金账户">现金账户</option>
-                            <option value="安全账户">安全账户</option>
-                            <option value="风险账户">风险账户</option>
-                            <option value="投机账户">投机账户</option>
-                            <option value="保险账户">保险账户</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>风险级别</label>
-                        <select id="formRiskLevel">
-                            <option value="">不设置</option>
-                            <option value="无风险">无风险</option>
-                            <option value="低风险">低风险</option>
-                            <option value="中低风险">中低风险</option>
-                            <option value="中风险">中风险</option>
-                            <option value="中高风险">中高风险</option>
-                            <option value="高风险">高风险</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group" id="customAccountTypeGroup" style="display: none;">
-                    <label>自定义账户类型</label>
-                    <input type="text" id="formAccountTypeCustom" placeholder="输入自定义账户类型">
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>账户规划</label>
-                        <input type="text" id="formAccountPlan" placeholder="如：日常开支、紧急备用">
-                    </div>
-                    <div class="form-group">
-                        <label>配置类别</label>
-                        <input type="text" id="formCategory" placeholder="如：货币基金、债券">
-                    </div>
-                </div>
-                <div class="form-row-3">
-                    <div class="form-group">
-                        <label>初始金额 (¥)</label>
-                        <input type="number" id="formInitialAmount" value="100000" step="1000">
-                    </div>
-                    <div class="form-group">
-                        <label>预期收益 (%/年)</label>
-                        <input type="number" id="formReturn" value="5" step="0.1">
-                    </div>
-                    <div class="form-group">
-                        <label>最大回撤 (%)</label>
-                        <input type="number" id="formDrawdown" value="2" step="0.1" min="0">
-                    </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">科目名称</label>
+                    <input type="text" class="form-input" id="newItemName" placeholder="请输入科目名称">
                 </div>
                 <div class="form-group">
-                    <label>工具说明</label>
-                    <input type="text" id="formTools" placeholder="如：余额宝、银行存款">
+                    <label class="form-label">所属类别</label>
+                    <select class="form-select" id="newItemCategory">
+                        <!-- 动态生成 -->
+                    </select>
                 </div>
-            </form>
-            
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
-                <button class="btn btn-primary" id="modalConfirmBtn" onclick="saveConfig()">确认添加</button>
+                <div class="form-group">
+                    <label class="form-label">风险级别</label>
+                    <select class="form-select" id="newItemRisk">
+                        <option value="低风险">低风险</option>
+                        <option value="中风险">中风险</option>
+                        <option value="高风险">高风险</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">初始金额</label>
+                    <input type="number" class="form-input" id="newItemAmount" placeholder="0">
+                </div>
+                <button class="btn btn-primary" onclick="addNewItem()">确认添加</button>
             </div>
         </div>
     </div>
-    
-    <div class="toast" id="toast">
-        <span id="toastMessage">操作成功！</span>
-    </div>
-    
+
+    <!-- Toast提示 -->
+    <div class="toast" id="toast"></div>
+
     <script>
-        // ==================== 本地存储相关 ====================
-        const STORAGE_KEY = 'assetAllocationData';
-        let saveTimeout = null;
-
-        function saveToLocalStorage() {
-            const data = {
-                initialAsset: parseFloat(document.getElementById('initialAsset').value) || 5000000,
-                startYear: parseInt(document.getElementById('startYear').value) || 2025,
-                startMonth: parseInt(document.getElementById('startMonth').value) || 1,
-                configData: configData,
-                targetRatios: targetRatios,
-                lastSaved: new Date().toISOString()
-            };
-
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-                updateStorageStatus(true);
-            } catch (e) {
-                console.error('保存失败:', e);
-                showToast('本地存储失败，请导出备份', 'error');
-            }
-        }
-
-        function loadFromLocalStorage() {
-            try {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    if (data.configData) configData = data.configData;
-                    if (data.targetRatios) targetRatios = data.targetRatios;
-                    if (data.initialAsset) document.getElementById('initialAsset').value = data.initialAsset;
-                    if (data.startYear) document.getElementById('startYear').value = data.startYear;
-                    if (data.startMonth) document.getElementById('startMonth').value = data.startMonth;
-                    return true;
-                }
-            } catch (e) {
-                console.error('读取本地存储失败:', e);
-            }
-            return false;
-        }
-
-        function updateStorageStatus(saved) {
-            const dot = document.getElementById('storageDot');
-            const text = document.getElementById('storageText');
-            if (saved) {
-                dot.classList.remove('unsaved');
-                text.textContent = '已自动保存';
-            } else {
-                dot.classList.add('unsaved');
-                text.textContent = '未保存...';
-            }
-        }
-
-        function scheduleSave() {
-            updateStorageStatus(false);
-            if (saveTimeout) clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(saveToLocalStorage, 1000);
-        }
-
-        function importData() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.onchange = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const data = JSON.parse(event.target.result);
-                        if (data.configData) {
-                            configData = data.configData;
-                            if (data.initialAsset) document.getElementById('initialAsset').value = data.initialAsset;
-                            if (data.startYear) document.getElementById('startYear').value = data.startYear;
-                            if (data.startMonth) document.getElementById('startMonth').value = data.startMonth;
-                            if (data.targetRatios) targetRatios = data.targetRatios;
-                            recalculate();
-                            saveToLocalStorage();
-                            showToast('导入成功！', 'success');
-                        } else {
-                            showToast('无效的数据文件', 'error');
-                        }
-                    } catch (err) {
-                        showToast('文件解析失败', 'error');
-                    }
-                };
-                reader.readAsText(file);
-            };
-            input.click();
-        }
-
-        // ==================== 目标配置比例 ====================
-        let targetRatios = {
-            '现金账户': 5,
-            '安全账户': 30,
-            '风险账户': 50,
-            '投机账户': 15,
-            '保险账户': 0
-        };
-
-        let targetPanelExpanded = true;
-
-        function toggleTargetPanel() {
-            targetPanelExpanded = !targetPanelExpanded;
-            document.getElementById('targetGridContainer').style.display = targetPanelExpanded ? 'block' : 'none';
-            document.getElementById('targetToggleText').textContent = targetPanelExpanded ? '收起' : '展开';
-        }
-
-        function updateTargetRatio(accountType, value) {
-            targetRatios[accountType] = parseFloat(value) || 0;
-            renderTargetGrid();
-            scheduleSave();
-        }
-
-        function renderTargetGrid() {
-            const grid = document.getElementById('targetGrid');
-            const leaves = getLeafNodes(configData);
-            const latest = getLatestDataMonth();
-
-            let totalAmount = 0;
-            leaves.forEach(node => {
-                totalAmount += getNodeAmountAtMonth(node, latest.year, latest.month);
-            });
-
-            // 计算各账户类型的实际金额
-            const accountAmounts = {};
-            const accountTypes = ['现金账户', '安全账户', '风险账户', '投机账户', '保险账户'];
-            accountTypes.forEach(type => accountAmounts[type] = 0);
-
-            leaves.forEach(node => {
-                const rootType = findRootAccountType(configData, node.id);
-                if (rootType && accountAmounts.hasOwnProperty(rootType)) {
-                    accountAmounts[rootType] += getNodeAmountAtMonth(node, latest.year, latest.month);
-                }
-            });
-
-            const colorMap = {
-                '现金账户': '#86efac',
-                '安全账户': '#93c5fd',
-                '风险账户': '#fcd34d',
-                '投机账户': '#fca5a5',
-                '保险账户': '#c4b5fd'
-            };
-
-            let html = '';
-            let totalTarget = 0;
-
-            accountTypes.forEach(type => {
-                const target = targetRatios[type] || 0;
-                totalTarget += target;
-                const actual = totalAmount > 0 ? (accountAmounts[type] / totalAmount * 100) : 0;
-                const diff = actual - target;
-                const diffClass = Math.abs(diff) < 2 ? 'match' : (diff < 0 ? 'under' : 'over');
-                const barWidth = Math.min(actual, 100);
-
-                html += `
-                    <div class="target-item">
-                        <div class="target-item-header">
-                            <span class="target-item-name" style="color: ${colorMap[type]}">${type}</span>
-                            <div class="target-item-input">
-                                <input type="number" value="${target}" min="0" max="100" step="1"
-                                    onchange="updateTargetRatio('${type}', this.value)">
-                                <span>%</span>
-                            </div>
-                        </div>
-                        <div class="target-bar">
-                            <div class="target-bar-fill ${diffClass}" style="width: ${barWidth}%"></div>
-                        </div>
-                        <div class="target-stats">
-                            <span class="target-actual">实际: ${actual.toFixed(1)}%</span>
-                            <span class="target-diff ${diffClass}">
-                                ${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%
-                            </span>
-                        </div>
-                    </div>
-                `;
-            });
-
-            grid.innerHTML = html;
-
-            // 校验目标比例总和
-            const warnings = document.getElementById('validationWarnings');
-            if (Math.abs(totalTarget - 100) > 0.1) {
-                warnings.innerHTML = `
-                    <div class="validation-warning">
-                        ⚠️ 目标配置比例总和为 ${totalTarget.toFixed(1)}%，建议调整为 100%
-                    </div>
-                `;
-            } else {
-                warnings.innerHTML = '';
-            }
-        }
-
-        // ==================== 数据校验 ====================
-        function validateData() {
-            const warnings = [];
-            const leaves = getLeafNodes(configData);
-            const latest = getLatestDataMonth();
-
-            leaves.forEach(node => {
-                const amount = getNodeAmountAtMonth(node, latest.year, latest.month);
-                const name = node.accountPlan || node.category || node.accountType || '未命名';
-
-                if (amount < 0) {
-                    warnings.push(`"${name}" 期末金额为负数 (¥${formatNumber(amount)})，请检查数据`);
-                }
-            });
-
-            return warnings;
-        }
-
-        function showValidationWarnings() {
-            const warnings = validateData();
-            const container = document.getElementById('validationWarnings');
-
-            if (warnings.length > 0) {
-                container.innerHTML = warnings.map(w => `
-                    <div class="validation-warning">⚠️ ${w}</div>
-                `).join('');
-            }
-        }
-
-        // ==================== 修正Dietz收益率计算 ====================
-        function calculateModifiedDietzReturn(year, startMonth, endMonth) {
-            const leaves = getLeafNodes(configData);
-            const dataStartYear = parseInt(document.getElementById('startYear').value) || 2025;
-            const dataStartMonth = parseInt(document.getElementById('startMonth').value) || 1;
-
-            // 计算期初金额
-            let beginningValue = 0;
-            const prevMonth = startMonth - 1 < 1 ? 12 : startMonth - 1;
-            const prevYear = startMonth === 1 ? year - 1 : year;
-
-            leaves.forEach(node => {
-                if (year === dataStartYear && startMonth === dataStartMonth) {
-                    beginningValue += node.initialAmount || 0;
-                } else {
-                    beginningValue += getNodeAmountAtMonth(node, prevYear, prevMonth);
-                }
-            });
-
-            // 计算期末金额
-            let endingValue = 0;
-            leaves.forEach(node => {
-                endingValue += getNodeAmountAtMonth(node, year, endMonth);
-            });
-
-            // 计算期间总资金流动和加权资金流动
-            let totalFlow = 0;
-            let weightedFlow = 0;
-            const totalDays = (endMonth - startMonth + 1) * 30; // 简化为每月30天
-
-            for (let m = startMonth; m <= endMonth; m++) {
-                leaves.forEach(node => {
-                    const flow = getNodeMonthFlow(node, year, m);
-                    if (flow !== 0) {
-                        totalFlow += flow;
-                        // 假设资金在月中流入，计算权重
-                        const daysInPeriod = (endMonth - m + 0.5) * 30;
-                        const weight = daysInPeriod / totalDays;
-                        weightedFlow += flow * weight;
-                    }
-                });
-            }
-
-            // 修正Dietz收益率 = (期末 - 期初 - 净流入) / (期初 + 加权净流入)
-            const gain = endingValue - beginningValue - totalFlow;
-            const avgCapital = beginningValue + weightedFlow;
-
-            if (avgCapital <= 0) return 0;
-
-            return (gain / avgCapital) * 100;
-        }
-
-        function calculateAnnualizedReturn(periodReturn, months) {
-            if (months <= 0) return 0;
-            // 年化收益率 = (1 + 期间收益率)^(12/月数) - 1
-            const rate = periodReturn / 100;
-            return (Math.pow(1 + rate, 12 / months) - 1) * 100;
-        }
-
-        let idCounter = 100;
-        function generateId() { return 'item_' + (idCounter++); }
-
-        let currentView = 'current';
-        let entryYear = 2025;
-        let entryMonth = 1;
-        let statsMode = 'year';
-        
-        // 显示用的年月（现状模式使用）
-        let displayYear = 2025;
-        let displayMonth = 1;
-        
-        const accountColorMap = {
-            '现金账户': 'account-cash',
-            '安全账户': 'account-safe',
-            '风险账户': 'account-risk',
-            '投机账户': 'account-speculative',
-            '保险账户': 'account-insurance'
-        };
-        
-        function getAccountColorClass(accountType, parentAccountType) {
-            if (accountType && accountColorMap[accountType]) return accountColorMap[accountType];
-            if (parentAccountType && accountColorMap[parentAccountType]) return accountColorMap[parentAccountType];
-            return 'account-other';
-        }
-        
-        let configData = [
-            {
-                id: 'item_1',
-                accountType: '现金账户',
-                riskLevel: '无风险',
-                accountPlan: '日常开支',
-                category: '活期存款',
-                initialAmount: 250000,
-                tools: '银行活期/货币基金',
-                expectedReturn: 1.5,
-                maxDrawdown: 0,
-                monthlyData: {
-                    "2025-1": { flow: 0, profit: 312 },
-                    "2025-2": { flow: 50000, profit: 375 }
-                },
-                children: []
-            },
-            {
-                id: 'item_2',
-                accountType: '安全账户',
-                riskLevel: '低风险',
-                accountPlan: '保本增值',
-                category: '',
-                initialAmount: 0,
-                tools: '',
-                expectedReturn: 4,
-                maxDrawdown: 0,
-                monthlyData: {},
-                children: [
-                    {
-                        id: 'item_2_1',
-                        accountType: '',
-                        riskLevel: '',
-                        accountPlan: '养老规划',
-                        category: '年金保险',
-                        initialAmount: 750000,
-                        tools: '增额终身寿',
-                        expectedReturn: 3.5,
-                        maxDrawdown: 0,
-                        monthlyData: {
-                            "2025-1": { flow: 0, profit: 2187 },
-                            "2025-2": { flow: 0, profit: 2200 }
-                        },
-                        children: []
-                    },
-                    {
-                        id: 'item_2_2',
-                        accountType: '',
-                        riskLevel: '',
-                        accountPlan: '子女教育',
-                        category: '教育金',
-                        initialAmount: 750000,
-                        tools: '香港储蓄险',
-                        expectedReturn: 6,
-                        maxDrawdown: 0,
-                        monthlyData: {
-                            "2025-1": { flow: 100000, profit: 4250 },
-                            "2025-2": { flow: 0, profit: 4500 }
-                        },
-                        children: []
-                    }
-                ]
-            },
-            {
-                id: 'item_3',
-                accountType: '风险账户',
-                riskLevel: '中高风险',
-                accountPlan: '财富增值',
-                category: '',
-                initialAmount: 0,
-                tools: '',
-                expectedReturn: 10,
-                maxDrawdown: 15,
-                monthlyData: {},
-                children: [
-                    {
-                        id: 'item_3_1',
-                        accountType: '',
-                        riskLevel: '中低风险',
-                        accountPlan: '稳健收益',
-                        category: '债券基金',
-                        initialAmount: 1000000,
-                        tools: '纯债/混合债基',
-                        expectedReturn: 5,
-                        maxDrawdown: 3,
-                        monthlyData: {
-                            "2025-1": { flow: 0, profit: 4166 },
-                            "2025-2": { flow: -100000, profit: 3750 }
-                        },
-                        children: []
-                    },
-                    {
-                        id: 'item_3_2',
-                        accountType: '',
-                        riskLevel: '高风险',
-                        accountPlan: '高速增长',
-                        category: '股票基金',
-                        initialAmount: 0,
-                        tools: '',
-                        expectedReturn: 12,
-                        maxDrawdown: 25,
-                        monthlyData: {},
-                        children: [
-                            {
-                                id: 'item_3_2_1',
-                                accountType: '',
-                                riskLevel: '',
-                                accountPlan: 'A股配置',
-                                category: '国内指数',
-                                initialAmount: 750000,
-                                tools: '沪深300/中证500',
-                                expectedReturn: 10,
-                                maxDrawdown: 30,
-                                monthlyData: {
-                                    "2025-1": { flow: 0, profit: -15000 },
-                                    "2025-2": { flow: 200000, profit: 28500 }
-                                },
-                                children: []
-                            },
-                            {
-                                id: 'item_3_2_2',
-                                accountType: '',
-                                riskLevel: '',
-                                accountPlan: '海外配置',
-                                category: '海外指数',
-                                initialAmount: 750000,
-                                tools: '纳斯达克/标普500',
-                                expectedReturn: 15,
-                                maxDrawdown: 20,
-                                monthlyData: {
-                                    "2025-1": { flow: 0, profit: 18750 },
-                                    "2025-2": { flow: 0, profit: 15375 }
-                                },
-                                children: []
-                            }
-                        ]
-                    }
-                ]
-            },
-            {
-                id: 'item_4',
-                accountType: '投机账户',
-                riskLevel: '高风险',
-                accountPlan: '博取高收益',
-                category: '数字货币',
-                initialAmount: 750000,
-                tools: 'BTC/ETH',
-                expectedReturn: 30,
-                maxDrawdown: 50,
-                monthlyData: {
-                    "2025-1": { flow: 0, profit: 45000 },
-                    "2025-2": { flow: -250000, profit: -30000 }
-                },
-                children: []
-            }
-        ];
-        
+        // 数据结构
+        let configData = [];
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
         let pieChart = null;
-        let barChart = null;
-        let parentForAdd = null;
-        
-        function findNode(nodes, id) {
-            for (let node of nodes) {
-                if (node.id === id) return node;
-                if (node.children && node.children.length > 0) {
-                    const found = findNode(node.children, id);
-                    if (found) return found;
-                }
-            }
-            return null;
-        }
-        
-        function findRootAccountType(nodes, id, rootType = '') {
-            for (let node of nodes) {
-                const currentRootType = node.accountType || rootType;
-                if (node.id === id) return currentRootType;
-                if (node.children && node.children.length > 0) {
-                    const found = findRootAccountType(node.children, id, currentRootType);
-                    if (found) return found;
-                }
-            }
-            return null;
-        }
-        
-        function removeNode(nodes, id) {
-            for (let i = 0; i < nodes.length; i++) {
-                if (nodes[i].id === id) {
-                    nodes.splice(i, 1);
-                    return true;
-                }
-                if (nodes[i].children && removeNode(nodes[i].children, id)) return true;
-            }
-            return false;
-        }
-        
-        function getLeafNodes(nodes) {
-            let leaves = [];
-            for (let node of nodes) {
-                if (!node.children || node.children.length === 0) {
-                    leaves.push(node);
-                } else {
-                    leaves = leaves.concat(getLeafNodes(node.children));
-                }
-            }
-            return leaves;
-        }
-        
-        function formatNumber(num) {
-            return Math.round(num).toLocaleString('zh-CN');
-        }
-        
-        function formatMoney(num) {
-            if (num >= 0) {
-                return '+¥' + formatNumber(num);
+        let lineChart = null;
+
+        // 类别配置
+        const categoryConfig = {
+            '货币类': { icon: '💵', bgClass: 'bg-blue', textClass: 'text-blue', dotClass: 'dot-blue', color: '#3B82F6' },
+            '固收类': { icon: '🏦', bgClass: 'bg-green', textClass: 'text-green', dotClass: 'dot-green', color: '#10B981' },
+            '权益类': { icon: '📈', bgClass: 'bg-yellow', textClass: 'text-yellow', dotClass: 'dot-yellow', color: '#F59E0B' },
+            '保障类': { icon: '🛡️', bgClass: 'bg-purple', textClass: 'text-purple', dotClass: 'dot-purple', color: '#8B5CF6' },
+            '其他': { icon: '📦', bgClass: 'bg-red', textClass: 'text-red', dotClass: 'dot-red', color: '#EF4444' }
+        };
+
+        // 目标配置比例
+        let targetRatios = {
+            '货币类': 10,
+            '固收类': 40,
+            '权益类': 40,
+            '保障类': 10
+        };
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            initNavigation();
+            updateMonthDisplay();
+            renderAll();
+        });
+
+        // 从localStorage加载数据
+        function loadData() {
+            const saved = localStorage.getItem('assetConfigData');
+            if (saved) {
+                configData = JSON.parse(saved);
             } else {
-                return '-¥' + formatNumber(Math.abs(num));
+                // 默认数据
+                configData = [
+                    { id: 1, name: '活期存款', category: '货币类', risk: '低风险', initialAmount: 50000, monthlyData: {} },
+                    { id: 2, name: '货币基金', category: '货币类', risk: '低风险', initialAmount: 30000, monthlyData: {} },
+                    { id: 3, name: '定期存款', category: '固收类', risk: '低风险', initialAmount: 100000, monthlyData: {} },
+                    { id: 4, name: '国债', category: '固收类', risk: '低风险', initialAmount: 50000, monthlyData: {} },
+                    { id: 5, name: '债券基金', category: '固收类', risk: '中风险', initialAmount: 80000, monthlyData: {} },
+                    { id: 6, name: '股票', category: '权益类', risk: '高风险', initialAmount: 100000, monthlyData: {} },
+                    { id: 7, name: '股票基金', category: '权益类', risk: '高风险', initialAmount: 120000, monthlyData: {} },
+                    { id: 8, name: '重疾险', category: '保障类', risk: '低风险', initialAmount: 20000, monthlyData: {} },
+                    { id: 9, name: '意外险', category: '保障类', risk: '低风险', initialAmount: 5000, monthlyData: {} }
+                ];
+            }
+
+            const savedTargets = localStorage.getItem('targetRatios');
+            if (savedTargets) {
+                targetRatios = JSON.parse(savedTargets);
             }
         }
-        
-        // 判断是否为起始月份
-        function isStartMonth(year, month) {
-            const startYear = parseInt(document.getElementById('startYear').value) || 2025;
-            const startMonth = parseInt(document.getElementById('startMonth').value) || 1;
-            return year === startYear && month === startMonth;
+
+        // 保存数据
+        function saveToStorage() {
+            localStorage.setItem('assetConfigData', JSON.stringify(configData));
+            localStorage.setItem('targetRatios', JSON.stringify(targetRatios));
         }
 
-        // 获取节点到指定月末的金额
-        function getNodeAmountAtMonth(node, year, month) {
-            let amount = node.initialAmount || 0;
-            const startYear = parseInt(document.getElementById('startYear').value) || 2025;
-            const startMonth = parseInt(document.getElementById('startMonth').value) || 1;
+        // 初始化导航
+        function initNavigation() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const page = this.dataset.page;
+                    switchPage(page);
+                });
+            });
+        }
 
-            for (let y = startYear; y <= year; y++) {
-                const minM = (y === startYear) ? startMonth : 1;
-                const maxM = (y === year) ? month : 12;
-                for (let m = minM; m <= maxM; m++) {
-                    const key = `${y}-${m}`;
-                    if (node.monthlyData && node.monthlyData[key]) {
-                        amount += (node.monthlyData[key].flow || 0);
-                        amount += (node.monthlyData[key].profit || 0);
-                    }
+        // 切换页面
+        function switchPage(pageName) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            document.getElementById('page-' + pageName).classList.add('active');
+            document.querySelector(`.nav-item[data-page="${pageName}"]`).classList.add('active');
+
+            if (pageName === 'analysis') {
+                setTimeout(() => {
+                    renderCharts();
+                }, 100);
+            }
+        }
+
+        // 月份切换
+        function changeMonth(delta) {
+            currentMonth += delta;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            updateMonthDisplay();
+            renderAll();
+        }
+
+        function updateMonthDisplay() {
+            document.getElementById('monthDisplay').textContent = `${currentYear}年${currentMonth + 1}月`;
+        }
+
+        function getMonthKey(year = currentYear, month = currentMonth) {
+            return `${year}-${String(month + 1).padStart(2, '0')}`;
+        }
+
+        // 获取资产当前值
+        function getAssetValue(item, monthKey = getMonthKey()) {
+            if (item.monthlyData && item.monthlyData[monthKey] !== undefined) {
+                return item.monthlyData[monthKey];
+            }
+            return item.initialAmount || 0;
+        }
+
+        // 获取上月值
+        function getPrevMonthValue(item) {
+            let prevMonth = currentMonth - 1;
+            let prevYear = currentYear;
+            if (prevMonth < 0) {
+                prevMonth = 11;
+                prevYear--;
+            }
+            const prevKey = getMonthKey(prevYear, prevMonth);
+            return getAssetValue(item, prevKey);
+        }
+
+        // 渲染所有
+        function renderAll() {
+            renderOverview();
+            renderAssetList();
+            renderInputList();
+            renderTargetList();
+        }
+
+        // 渲染概览页面
+        function renderOverview() {
+            const monthKey = getMonthKey();
+            let total = 0;
+            let prevTotal = 0;
+            const categoryTotals = {};
+
+            configData.forEach(item => {
+                const value = getAssetValue(item, monthKey);
+                const prevValue = getPrevMonthValue(item);
+                total += value;
+                prevTotal += prevValue;
+
+                if (!categoryTotals[item.category]) {
+                    categoryTotals[item.category] = 0;
                 }
+                categoryTotals[item.category] += value;
+            });
+
+            // 总资产
+            document.getElementById('totalAmount').textContent = formatMoney(total);
+
+            // 变化
+            const change = total - prevTotal;
+            const changePercent = prevTotal > 0 ? (change / prevTotal * 100).toFixed(2) : 0;
+            const changeEl = document.getElementById('totalChange');
+            const changeValueEl = document.getElementById('changeValue');
+
+            if (change >= 0) {
+                changeEl.className = 'total-change positive';
+                changeEl.querySelector('span:first-child').textContent = '↑';
+                changeValueEl.textContent = `+${formatMoney(change)} (${changePercent}%)`;
+            } else {
+                changeEl.className = 'total-change negative';
+                changeEl.querySelector('span:first-child').textContent = '↓';
+                changeValueEl.textContent = `${formatMoney(change)} (${changePercent}%)`;
             }
 
-            return amount;
+            // 分布概览
+            const distributionRow = document.getElementById('distributionRow');
+            distributionRow.innerHTML = '';
+
+            Object.keys(categoryConfig).forEach(cat => {
+                if (cat === '其他') return;
+                const catTotal = categoryTotals[cat] || 0;
+                const percent = total > 0 ? (catTotal / total * 100).toFixed(1) : 0;
+                const config = categoryConfig[cat];
+
+                distributionRow.innerHTML += `
+                    <div class="distribution-item">
+                        <span class="distribution-dot ${config.dotClass}"></span>
+                        <span class="distribution-name">${cat}</span>
+                        <span class="distribution-value">${formatMoneyShort(catTotal)}</span>
+                        <span class="distribution-percent">${percent}%</span>
+                    </div>
+                `;
+            });
+
+            // 资产分组
+            renderAssetGroups(categoryTotals, total);
         }
 
-        // 获取有数据的最新月份
-        function getLatestDataMonth() {
-            const startYear = parseInt(document.getElementById('startYear').value) || 2025;
-            const startMonth = parseInt(document.getElementById('startMonth').value) || 1;
-            let latestYear = startYear;
-            let latestMonth = startMonth;
+        // 渲染资产分组
+        function renderAssetGroups(categoryTotals, total) {
+            const container = document.getElementById('assetGroups');
+            container.innerHTML = '';
 
-            function findLatest(nodes) {
-                for (let node of nodes) {
-                    if (node.monthlyData) {
-                        for (let key in node.monthlyData) {
-                            const [y, m] = key.split('-').map(Number);
-                            if (y > latestYear || (y === latestYear && m > latestMonth)) {
-                                latestYear = y;
-                                latestMonth = m;
+            const monthKey = getMonthKey();
+            const categories = [...new Set(configData.map(item => item.category))];
+
+            categories.forEach(cat => {
+                const config = categoryConfig[cat] || categoryConfig['其他'];
+                const items = configData.filter(item => item.category === cat);
+                const catTotal = categoryTotals[cat] || 0;
+                const percent = total > 0 ? (catTotal / total * 100).toFixed(1) : 0;
+
+                let itemsHtml = '';
+                items.forEach(item => {
+                    const value = getAssetValue(item, monthKey);
+                    const riskClass = item.risk === '高风险' ? 'bg-red text-red' :
+                                     item.risk === '中风险' ? 'bg-yellow text-yellow' : 'bg-green text-green';
+                    itemsHtml += `
+                        <div class="asset-item">
+                            <div>
+                                <span class="asset-item-name">${item.name}</span>
+                                <span class="asset-item-tag ${riskClass}">${item.risk}</span>
+                            </div>
+                            <span class="asset-item-amount">${formatMoney(value)}</span>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML += `
+                    <div class="asset-group" onclick="toggleGroup(this)">
+                        <div class="asset-group-header">
+                            <div class="asset-group-left">
+                                <div class="asset-group-icon ${config.bgClass}">
+                                    ${config.icon}
+                                </div>
+                                <div class="asset-group-info">
+                                    <h3>${cat}</h3>
+                                    <span>${items.length}个账户 · ${percent}%</span>
+                                </div>
+                            </div>
+                            <div class="asset-group-right">
+                                <span class="asset-group-amount">${formatMoney(catTotal)}</span>
+                                <span class="asset-group-arrow">▼</span>
+                            </div>
+                        </div>
+                        <div class="asset-group-items">
+                            ${itemsHtml}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // 展开/收起分组
+        function toggleGroup(el) {
+            el.classList.toggle('expanded');
+        }
+
+        // 渲染资产列表页面
+        function renderAssetList() {
+            const container = document.getElementById('assetList');
+            const filterContainer = document.getElementById('categoryFilter');
+            const monthKey = getMonthKey();
+
+            // 渲染筛选器
+            const categories = [...new Set(configData.map(item => item.category))];
+            filterContainer.innerHTML = '<div class="quick-action active" data-filter="all" onclick="filterAssets(\'all\')">全部</div>';
+            categories.forEach(cat => {
+                filterContainer.innerHTML += `<div class="quick-action" data-filter="${cat}" onclick="filterAssets('${cat}')">${cat}</div>`;
+            });
+
+            // 渲染列表
+            container.innerHTML = '';
+            configData.forEach(item => {
+                const value = getAssetValue(item, monthKey);
+                const prevValue = getPrevMonthValue(item);
+                const change = value - prevValue;
+                const config = categoryConfig[item.category] || categoryConfig['其他'];
+
+                container.innerHTML += `
+                    <div class="asset-group" data-category="${item.category}">
+                        <div class="asset-item" style="padding: 16px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div class="asset-group-icon ${config.bgClass}" style="width: 40px; height: 40px;">
+                                    ${config.icon}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: var(--gray-800);">${item.name}</div>
+                                    <div style="font-size: 12px; color: var(--gray-500);">${item.category} · ${item.risk}</div>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: 600; font-size: 16px;">${formatMoney(value)}</div>
+                                <div style="font-size: 12px; color: ${change >= 0 ? 'var(--success)' : 'var(--danger)'};">
+                                    ${change >= 0 ? '+' : ''}${formatMoney(change)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // 筛选资产
+        function filterAssets(category) {
+            document.querySelectorAll('#categoryFilter .quick-action').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === category);
+            });
+
+            document.querySelectorAll('#assetList .asset-group').forEach(item => {
+                if (category === 'all' || item.dataset.category === category) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // 渲染录入列表
+        function renderInputList() {
+            const container = document.getElementById('inputList');
+            const monthKey = getMonthKey();
+            container.innerHTML = '';
+
+            configData.forEach(item => {
+                const value = getAssetValue(item, monthKey);
+                container.innerHTML += `
+                    <div class="input-row">
+                        <span class="input-label">${item.name}</span>
+                        <input type="number" class="input-field"
+                               value="${value}"
+                               data-id="${item.id}"
+                               onchange="updateInputValue(${item.id}, this.value)">
+                    </div>
+                `;
+            });
+        }
+
+        // 更新输入值
+        function updateInputValue(id, value) {
+            const item = configData.find(i => i.id === id);
+            if (item) {
+                const monthKey = getMonthKey();
+                if (!item.monthlyData) item.monthlyData = {};
+                item.monthlyData[monthKey] = parseFloat(value) || 0;
+            }
+        }
+
+        // 保存数据
+        function saveData() {
+            // 收集所有输入值
+            document.querySelectorAll('#inputList .input-field').forEach(input => {
+                const id = parseInt(input.dataset.id);
+                const value = parseFloat(input.value) || 0;
+                updateInputValue(id, value);
+            });
+
+            saveToStorage();
+            renderAll();
+            showToast('保存成功');
+        }
+
+        // 渲染目标配置
+        function renderTargetList() {
+            const container = document.getElementById('targetList');
+            const monthKey = getMonthKey();
+            let total = 0;
+            const categoryTotals = {};
+
+            configData.forEach(item => {
+                const value = getAssetValue(item, monthKey);
+                total += value;
+                if (!categoryTotals[item.category]) {
+                    categoryTotals[item.category] = 0;
+                }
+                categoryTotals[item.category] += value;
+            });
+
+            container.innerHTML = '';
+            Object.keys(targetRatios).forEach(cat => {
+                const config = categoryConfig[cat] || categoryConfig['其他'];
+                const currentValue = categoryTotals[cat] || 0;
+                const currentPercent = total > 0 ? (currentValue / total * 100).toFixed(1) : 0;
+                const targetPercent = targetRatios[cat];
+
+                container.innerHTML += `
+                    <div class="target-item">
+                        <div class="target-color" style="background: ${config.color}"></div>
+                        <span class="target-name">${cat}</span>
+                        <div class="target-values">
+                            <span class="target-current">${currentPercent}%</span>
+                            <input type="number" class="target-input"
+                                   value="${targetPercent}"
+                                   data-category="${cat}"
+                                   onchange="updateTarget('${cat}', this.value)">
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // 更新目标配置
+        function updateTarget(category, value) {
+            targetRatios[category] = parseFloat(value) || 0;
+            saveToStorage();
+        }
+
+        // 渲染图表
+        function renderCharts() {
+            renderPieChart();
+            renderLineChart();
+        }
+
+        // 饼图
+        function renderPieChart() {
+            const ctx = document.getElementById('pieChart').getContext('2d');
+            const monthKey = getMonthKey();
+            const categoryTotals = {};
+
+            configData.forEach(item => {
+                const value = getAssetValue(item, monthKey);
+                if (!categoryTotals[item.category]) {
+                    categoryTotals[item.category] = 0;
+                }
+                categoryTotals[item.category] += value;
+            });
+
+            const labels = Object.keys(categoryTotals);
+            const data = Object.values(categoryTotals);
+            const colors = labels.map(cat => (categoryConfig[cat] || categoryConfig['其他']).color);
+
+            if (pieChart) pieChart.destroy();
+
+            pieChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 12,
+                                font: { size: 12 }
+                            }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+
+        // 折线图
+        function renderLineChart() {
+            const ctx = document.getElementById('lineChart').getContext('2d');
+            const months = [];
+            const totals = [];
+
+            for (let i = 5; i >= 0; i--) {
+                let m = currentMonth - i;
+                let y = currentYear;
+                if (m < 0) {
+                    m += 12;
+                    y--;
+                }
+                const monthKey = getMonthKey(y, m);
+                months.push(`${m + 1}月`);
+
+                let total = 0;
+                configData.forEach(item => {
+                    total += getAssetValue(item, monthKey);
+                });
+                totals.push(total);
+            }
+
+            if (lineChart) lineChart.destroy();
+
+            lineChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: '总资产',
+                        data: totals,
+                        borderColor: '#4F46E5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#4F46E5'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: value => formatMoneyShort(value)
                             }
                         }
                     }
-                    if (node.children) findLatest(node.children);
                 }
-            }
+            });
+        }
 
-            findLatest(configData);
-            return { year: latestYear, month: latestMonth };
-        }
-        
-        // 获取节点某月的收益
-        function getNodeMonthProfit(node, year, month) {
-            const key = `${year}-${month}`;
-            return node.monthlyData?.[key]?.profit || 0;
-        }
-        
-        // 获取节点某月的资金变动
-        function getNodeMonthFlow(node, year, month) {
-            const key = `${year}-${month}`;
-            return node.monthlyData?.[key]?.flow || 0;
-        }
-        
-        // 获取所有叶子节点在时间范围内的总收益
-        function getTotalProfit(year, startMonth, endMonth) {
-            const leaves = getLeafNodes(configData);
-            let total = 0;
-            for (let m = startMonth; m <= endMonth; m++) {
-                leaves.forEach(node => {
-                    total += getNodeMonthProfit(node, year, m);
-                });
-            }
-            return total;
-        }
-        
-        // 获取所有叶子节点在时间范围内的总资金变动
-        function getTotalFlow(year, startMonth, endMonth) {
-            const leaves = getLeafNodes(configData);
-            let total = 0;
-            for (let m = startMonth; m <= endMonth; m++) {
-                leaves.forEach(node => {
-                    total += getNodeMonthFlow(node, year, m);
-                });
-            }
-            return total;
-        }
-        
-        // 切换视图
-        function switchView(view) {
-            currentView = view;
-            
-            document.getElementById('tabCurrent').classList.toggle('active', view === 'current');
-            document.getElementById('tabHistory').classList.toggle('active', view === 'history');
-            document.getElementById('tabEntry').classList.toggle('active', view === 'entry');
-            
-            document.getElementById('historyDateSelector').style.display = view === 'history' ? 'flex' : 'none';
-            document.getElementById('entryPanel').style.display = view === 'entry' ? 'block' : 'none';
-            
-            if (view === 'current') {
-                // 现状模式：显示最新有数据的月份
-                const latest = getLatestDataMonth();
-                displayYear = latest.year;
-                displayMonth = latest.month;
-                document.getElementById('viewBadge').textContent = `${displayYear}年${displayMonth}月`;
-            } else if (view === 'history') {
-                const y = document.getElementById('viewYear').value;
-                const m = document.getElementById('viewMonth').value;
-                document.getElementById('viewBadge').textContent = `${y}年${m}月`;
-            } else {
-                document.getElementById('viewBadge').textContent = `录入: ${entryYear}年${entryMonth}月`;
-            }
-            
-            renderTable();
-        }
-        
-        // 应用录入月份
-        function applyEntryMonth() {
-            entryYear = parseInt(document.getElementById('entryYear').value);
-            entryMonth = parseInt(document.getElementById('entryMonth').value);
-            document.getElementById('viewBadge').textContent = `录入: ${entryYear}年${entryMonth}月`;
-            renderTable();
-            showToast(`已切换到 ${entryYear}年${entryMonth}月 录入模式`, 'success');
-        }
-        
-        // 渲染表格
-        function renderTable() {
-            const thead = document.getElementById('tableHeader');
-            const tbody = document.getElementById('tableBody');
-            
-            // 确定显示的年月
-            let showYear, showMonth;
-            if (currentView === 'current') {
-                showYear = displayYear;
-                showMonth = displayMonth;
-            } else if (currentView === 'history') {
-                showYear = parseInt(document.getElementById('viewYear').value);
-                showMonth = parseInt(document.getElementById('viewMonth').value);
-                document.getElementById('viewBadge').textContent = `${showYear}年${showMonth}月`;
-            } else {
-                showYear = entryYear;
-                showMonth = entryMonth;
-            }
-            
-            // 根据视图模式设置表头
-            if (currentView === 'entry') {
-                thead.innerHTML = `
-                    <tr>
-                        <th>账户类型</th>
-                        <th>风险级别</th>
-                        <th>账户规划</th>
-                        <th>配置类别</th>
-                        <th>期初金额</th>
-                        <th>资金变动</th>
-                        <th>当月收益</th>
-                        <th>期末金额</th>
-                        <th>工具说明</th>
-                        <th>操作</th>
-                    </tr>
-                `;
-            } else {
-                thead.innerHTML = `
-                    <tr>
-                        <th>账户类型</th>
-                        <th>风险级别</th>
-                        <th>账户规划</th>
-                        <th>配置类别</th>
-                        <th>当前金额</th>
-                        <th>当月收益</th>
-                        <th>占比(%)</th>
-                        <th>工具说明</th>
-                        <th>预期收益(%)</th>
-                        <th>操作</th>
-                    </tr>
-                `;
-            }
-            
-            tbody.innerHTML = '';
-            
-            // 计算总资产
-            const leaves = getLeafNodes(configData);
-            let totalCurrentAmount = 0;
-            
-            leaves.forEach(node => {
-                totalCurrentAmount += getNodeAmountAtMonth(node, showYear, showMonth);
-            });
-            
-            renderNodes(tbody, configData, 1, totalCurrentAmount, '', showYear, showMonth);
-            
-            // 合计行
-            if (currentView === 'entry') {
-                let totalStartAmount = 0;
-                let totalFlow = 0;
-                let totalProfit = 0;
-                let totalEndAmount = 0;
-                
-                leaves.forEach(node => {
-                    const prevMonth = showMonth - 1 < 1 ? 12 : showMonth - 1;
-                    const prevYear = showMonth === 1 ? showYear - 1 : showYear;
-                    const startAmount = isStartMonth(showYear, showMonth)
-                        ? node.initialAmount
-                        : getNodeAmountAtMonth(node, prevYear, prevMonth);
-                    const flow = getNodeMonthFlow(node, showYear, showMonth);
-                    const profit = getNodeMonthProfit(node, showYear, showMonth);
-                    const endAmount = getNodeAmountAtMonth(node, showYear, showMonth);
-                    
-                    totalStartAmount += startAmount;
-                    totalFlow += flow;
-                    totalProfit += profit;
-                    totalEndAmount += endAmount;
-                });
-                
-                const totalRow = document.createElement('tr');
-                totalRow.className = 'total-row';
-                totalRow.innerHTML = `
-                    <td colspan="4"><strong>合计</strong></td>
-                    <td><strong>${formatNumber(totalStartAmount)}</strong></td>
-                    <td class="${totalFlow >= 0 ? 'profit-positive' : 'profit-negative'}"><strong>${formatMoney(totalFlow)}</strong></td>
-                    <td class="${totalProfit >= 0 ? 'profit-positive' : 'profit-negative'}"><strong>${formatMoney(totalProfit)}</strong></td>
-                    <td><strong>${formatNumber(totalEndAmount)}</strong></td>
-                    <td>-</td>
-                    <td>-</td>
-                `;
-                tbody.appendChild(totalRow);
-            } else {
-                let totalProfit = 0;
-                leaves.forEach(node => {
-                    totalProfit += getNodeMonthProfit(node, showYear, showMonth);
-                });
-                
-                const totalRow = document.createElement('tr');
-                totalRow.className = 'total-row';
-                totalRow.innerHTML = `
-                    <td colspan="4"><strong>合计</strong></td>
-                    <td><strong>${formatNumber(totalCurrentAmount)}</strong></td>
-                    <td class="${totalProfit >= 0 ? 'profit-positive' : 'profit-negative'}"><strong>${formatMoney(totalProfit)}</strong></td>
-                    <td><strong>100.0</strong></td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                `;
-                tbody.appendChild(totalRow);
-            }
-            
-            // 更新当前总资产显示
-            document.getElementById('currentTotalDisplay').textContent = '¥' + formatNumber(totalCurrentAmount);
-        }
-        
-        // 递归渲染节点
-        function renderNodes(tbody, nodes, level, totalAmount, parentAccountType, showYear, showMonth) {
-            nodes.forEach(item => {
-                const currentAccountType = item.accountType || parentAccountType;
-                
-                const row = document.createElement('tr');
-                const colorClass = getAccountColorClass(item.accountType, parentAccountType);
-                row.className = `level-${Math.min(level, 4)} ${colorClass}`;
-                row.dataset.id = item.id;
-                
-                let indent = '';
-                if (level > 1) {
-                    indent = '<span class="indent">' + '├─'.repeat(level - 1) + '</span>';
-                }
-                const levelBadge = `<span class="level-badge">L${level}</span>`;
-                
-                if (currentView === 'entry') {
-                    const prevMonth = showMonth - 1 < 1 ? 12 : showMonth - 1;
-                    const prevYear = showMonth === 1 ? showYear - 1 : showYear;
-                    const startAmount = showMonth === 1 && showYear === 2025 
-                        ? item.initialAmount 
-                        : getNodeAmountAtMonth(item, prevYear, prevMonth);
-                    const flow = getNodeMonthFlow(item, showYear, showMonth);
-                    const profit = getNodeMonthProfit(item, showYear, showMonth);
-                    const endAmount = getNodeAmountAtMonth(item, showYear, showMonth);
-                    
-                    const flowClass = flow > 0 ? 'profit-positive' : flow < 0 ? 'profit-negative' : 'flow-type';
-                    const profitClass = profit > 0 ? 'profit-positive' : profit < 0 ? 'profit-negative' : 'number-type';
-                    
-                    row.innerHTML = `
-                        <td>
-                            <span class="level-indent">
-                                ${indent}
-                                <span class="editable text-type" onclick="editCell(this, '${item.id}', 'accountType')">${item.accountType || '-'}</span>
-                            </span>
-                            ${levelBadge}
-                        </td>
-                        <td><span class="editable text-type" onclick="editCell(this, '${item.id}', 'riskLevel')">${item.riskLevel || '-'}</span></td>
-                        <td><span class="editable text-type" onclick="editCell(this, '${item.id}', 'accountPlan')">${item.accountPlan || '-'}</span></td>
-                        <td><span class="editable text-type" onclick="editCell(this, '${item.id}', 'category')">${item.category || '-'}</span></td>
-                        <td>${formatNumber(startAmount)}</td>
-                        <td><span class="editable ${flowClass}" onclick="editMonthlyData(this, '${item.id}', 'flow')">${flow !== 0 ? formatMoney(flow) : '点击录入'}</span></td>
-                        <td><span class="editable ${profitClass}" onclick="editMonthlyData(this, '${item.id}', 'profit')">${profit !== 0 ? formatMoney(profit) : '点击录入'}</span></td>
-                        <td><strong>${formatNumber(endAmount)}</strong></td>
-                        <td><span class="editable text-type" onclick="editCell(this, '${item.id}', 'tools')">${item.tools || '-'}</span></td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="btn-icon btn-add-child" onclick="openModal('${item.id}')" title="添加子级">➕</button>
-                                <button class="btn-icon btn-delete" onclick="deleteItem('${item.id}')" title="删除">🗑️</button>
-                            </div>
-                        </td>
-                    `;
-                } else {
-                    const amount = getNodeAmountAtMonth(item, showYear, showMonth);
-                    const profit = getNodeMonthProfit(item, showYear, showMonth);
-                    const ratio = totalAmount > 0 ? (amount / totalAmount * 100) : 0;
-                    
-                    const profitClass = profit > 0 ? 'profit-positive' : profit < 0 ? 'profit-negative' : 'profit-zero';
-                    
-                    row.innerHTML = `
-                        <td>
-                            <span class="level-indent">
-                                ${indent}
-                                <span class="editable text-type" onclick="editCell(this, '${item.id}', 'accountType')">${item.accountType || '-'}</span>
-                            </span>
-                            ${levelBadge}
-                        </td>
-                        <td><span class="editable text-type" onclick="editCell(this, '${item.id}', 'riskLevel')">${item.riskLevel || '-'}</span></td>
-                        <td><span class="editable text-type" onclick="editCell(this, '${item.id}', 'accountPlan')">${item.accountPlan || '-'}</span></td>
-                        <td><span class="editable text-type" onclick="editCell(this, '${item.id}', 'category')">${item.category || '-'}</span></td>
-                        <td><span class="editable amount-type">${formatNumber(amount)}</span></td>
-                        <td class="${profitClass}">${profit !== 0 ? formatMoney(profit) : '-'}</td>
-                        <td>${ratio.toFixed(1)}</td>
-                        <td><span class="editable text-type" onclick="editCell(this, '${item.id}', 'tools')">${item.tools || '-'}</span></td>
-                        <td><span class="editable number-type" onclick="editCell(this, '${item.id}', 'expectedReturn')">${item.expectedReturn}</span></td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="btn-icon btn-add-child" onclick="openModal('${item.id}')" title="添加子级">➕</button>
-                                <button class="btn-icon btn-delete" onclick="deleteItem('${item.id}')" title="删除">🗑️</button>
-                            </div>
-                        </td>
-                    `;
-                }
-                
-                tbody.appendChild(row);
-                
-                if (item.children && item.children.length > 0) {
-                    renderNodes(tbody, item.children, level + 1, totalAmount, currentAccountType, showYear, showMonth);
-                }
-            });
-        }
-        
-        function editCell(element, id, field) {
-            if (element.classList.contains('editing')) return;
-            
-            const item = findNode(configData, id);
-            if (!item) return;
-            
-            let currentValue = item[field] || '';
-            const isNumber = ['initialAmount', 'expectedReturn', 'maxDrawdown'].includes(field);
-            
-            element.classList.add('editing');
-            element.innerHTML = `<input type="${isNumber ? 'number' : 'text'}" value="${currentValue}" step="0.01">`;
-            
-            const input = element.querySelector('input');
-            input.focus();
-            input.select();
-            
-            const saveEdit = () => {
-                let newValue = isNumber ? parseFloat(input.value) || 0 : input.value.trim();
-                item[field] = newValue;
-                element.classList.remove('editing');
-                recalculate();
-            };
-            
-            input.addEventListener('blur', saveEdit);
-            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') saveEdit(); });
-        }
-        
-        function editMonthlyData(element, id, field) {
-            if (element.classList.contains('editing')) return;
-            
-            const item = findNode(configData, id);
-            if (!item) return;
-            
-            const key = `${entryYear}-${entryMonth}`;
-            if (!item.monthlyData) item.monthlyData = {};
-            if (!item.monthlyData[key]) item.monthlyData[key] = { flow: 0, profit: 0 };
-            
-            const currentValue = item.monthlyData[key][field] || 0;
-            
-            element.classList.add('editing');
-            element.innerHTML = `<input type="number" value="${currentValue}" step="0.01" placeholder="${field === 'flow' ? '追加+/赎回-' : '盈利+/亏损-'}">`;
-            
-            const input = element.querySelector('input');
-            input.focus();
-            input.select();
-            
-            const saveEdit = () => {
-                const newValue = parseFloat(input.value) || 0;
-                item.monthlyData[key][field] = newValue;
-                element.classList.remove('editing');
-                recalculate();
-                showToast(`${entryYear}年${entryMonth}月 ${field === 'flow' ? '资金变动' : '收益'} 已保存`, 'success');
-            };
-            
-            input.addEventListener('blur', saveEdit);
-            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') saveEdit(); });
-        }
-        
-        function openModal(parentId) {
-            parentForAdd = parentId ? findNode(configData, parentId) : null;
-            
-            document.getElementById('modalTitle').textContent = parentForAdd ? '➕ 添加子级科目' : '➕ 添加新科目';
-            document.getElementById('modalConfirmBtn').textContent = '确认添加';
-            
-            if (parentForAdd) {
-                document.getElementById('parentInfo').style.display = 'block';
-                document.getElementById('parentName').textContent = parentForAdd.accountType || parentForAdd.accountPlan || parentForAdd.category || '未命名';
-            } else {
-                document.getElementById('parentInfo').style.display = 'none';
-            }
-            
-            document.getElementById('formAccountType').value = '';
-            document.getElementById('formAccountTypeCustom').value = '';
-            document.getElementById('customAccountTypeGroup').style.display = 'none';
-            document.getElementById('formRiskLevel').value = '';
-            document.getElementById('formAccountPlan').value = '';
-            document.getElementById('formCategory').value = '';
-            document.getElementById('formInitialAmount').value = '100000';
-            document.getElementById('formTools').value = '';
-            document.getElementById('formReturn').value = '5';
-            document.getElementById('formDrawdown').value = '2';
-            
-            document.getElementById('modal').classList.add('active');
-        }
-        
-        function closeModal() {
-            document.getElementById('modal').classList.remove('active');
-        }
-        
-        document.getElementById('formAccountType').addEventListener('change', function() {
-            document.getElementById('customAccountTypeGroup').style.display = this.value === '' ? 'block' : 'none';
-        });
-        
-        function saveConfig() {
-            let accountType = document.getElementById('formAccountType').value;
-            if (accountType === '') {
-                accountType = document.getElementById('formAccountTypeCustom').value.trim();
-            }
-            
-            const newItem = {
-                id: generateId(),
-                accountType: accountType,
-                riskLevel: document.getElementById('formRiskLevel').value,
-                accountPlan: document.getElementById('formAccountPlan').value.trim(),
-                category: document.getElementById('formCategory').value.trim(),
-                initialAmount: parseFloat(document.getElementById('formInitialAmount').value) || 0,
-                tools: document.getElementById('formTools').value.trim(),
-                expectedReturn: parseFloat(document.getElementById('formReturn').value) || 0,
-                maxDrawdown: parseFloat(document.getElementById('formDrawdown').value) || 0,
-                monthlyData: {},
-                children: []
-            };
-            
-            if (parentForAdd) {
-                if (!parentForAdd.children) parentForAdd.children = [];
-                parentForAdd.children.push(newItem);
-                showToast('子级科目已添加！', 'success');
-            } else {
-                configData.push(newItem);
-                showToast('科目已添加！', 'success');
-            }
-            
-            closeModal();
-            recalculate();
-        }
-        
-        function deleteItem(id) {
-            const item = findNode(configData, id);
-            if (!item) return;
-            
-            const hasChildren = item.children && item.children.length > 0;
-            const name = item.accountType || item.accountPlan || item.category || '该科目';
-            const message = hasChildren ? `确定删除"${name}"及其所有子级吗？` : `确定删除"${name}"吗？`;
-            
-            if (confirm(message)) {
-                removeNode(configData, id);
-                recalculate();
-                showToast('已删除', 'success');
-            }
-        }
-        
-        function setStatsMode(mode) {
-            statsMode = mode;
-            
-            document.getElementById('statsModeSingle').classList.toggle('active', mode === 'single');
-            document.getElementById('statsModeRange').classList.toggle('active', mode === 'range');
-            document.getElementById('statsModeYear').classList.toggle('active', mode === 'year');
-            
-            document.getElementById('statsSingleGroup').style.display = mode === 'single' ? 'flex' : 'none';
-            document.getElementById('statsRangeGroup').style.display = mode === 'range' ? 'flex' : 'none';
-            
-            updateStats();
-        }
-        
-        function getStatsParams() {
-            const year = parseInt(document.getElementById('statsYear').value);
-            let startMonth, endMonth;
-            
-            if (statsMode === 'single') {
-                startMonth = parseInt(document.getElementById('statsMonth').value);
-                endMonth = startMonth;
-            } else if (statsMode === 'range') {
-                startMonth = parseInt(document.getElementById('statsStartMonth').value);
-                endMonth = parseInt(document.getElementById('statsEndMonth').value);
-                if (startMonth > endMonth) [startMonth, endMonth] = [endMonth, startMonth];
-            } else {
-                startMonth = 1;
-                endMonth = 12;
-            }
-            
-            return { year, startMonth, endMonth };
-        }
-        
+        // 计算收益统计
         function updateStats() {
-            const { year, startMonth, endMonth } = getStatsParams();
+            const monthKey = getMonthKey();
+            let total = 0;
+            let prevTotal = 0;
 
-            const tag = document.getElementById('statsDateTag');
-            if (startMonth === endMonth) {
-                tag.textContent = `${year}年${startMonth}月`;
-                document.getElementById('periodProfitLabel').textContent = `${startMonth}月收益`;
-            } else if (startMonth === 1 && endMonth === 12) {
-                tag.textContent = `${year}年全年`;
-                document.getElementById('periodProfitLabel').textContent = '全年收益';
-            } else {
-                tag.textContent = `${year}年${startMonth}-${endMonth}月`;
-                document.getElementById('periodProfitLabel').textContent = `${startMonth}-${endMonth}月收益`;
-            }
-
-            const periodProfit = getTotalProfit(year, startMonth, endMonth);
-            const yearProfit = getTotalProfit(year, 1, 12);
-            const yearFlow = getTotalFlow(year, 1, 12);
-
-            const initialAsset = parseFloat(document.getElementById('initialAsset').value) || 5000000;
-            const leaves = getLeafNodes(configData);
-
-            const latest = getLatestDataMonth();
-            let currentTotal = 0;
-            leaves.forEach(node => {
-                currentTotal += getNodeAmountAtMonth(node, latest.year, latest.month);
+            configData.forEach(item => {
+                total += getAssetValue(item, monthKey);
+                prevTotal += getPrevMonthValue(item);
             });
 
-            // 使用修正Dietz方法计算收益率
-            const periodRate = calculateModifiedDietzReturn(year, startMonth, endMonth);
-            const yearRate = calculateModifiedDietzReturn(year, 1, 12);
-            const assetGrowth = initialAsset > 0 ? ((currentTotal - initialAsset) / initialAsset * 100) : 0;
+            const monthProfit = total - prevTotal;
+            const monthRate = prevTotal > 0 ? (monthProfit / prevTotal * 100) : 0;
 
-            document.getElementById('periodProfit').textContent = formatMoney(periodProfit);
-            document.getElementById('periodProfit').style.color = periodProfit >= 0 ? '#fff' : '#fca5a5';
-            document.getElementById('periodRate').textContent = periodRate.toFixed(2) + '%';
+            document.getElementById('monthProfit').textContent = (monthProfit >= 0 ? '+' : '') + formatMoney(monthProfit);
+            document.getElementById('monthProfit').className = 'stat-value ' + (monthProfit >= 0 ? 'positive' : 'negative');
+
+            document.getElementById('monthRate').textContent = (monthRate >= 0 ? '+' : '') + monthRate.toFixed(2) + '%';
+            document.getElementById('monthRate').className = 'stat-value ' + (monthRate >= 0 ? 'positive' : 'negative');
+
+            // 年化收益（简化计算）
+            const yearProfit = monthProfit * 12;
+            const yearRate = monthRate * 12;
 
             document.getElementById('yearProfit').textContent = formatMoney(yearProfit);
-            document.getElementById('yearProfit').style.color = yearProfit >= 0 ? '#16a34a' : '#dc2626';
             document.getElementById('yearRate').textContent = yearRate.toFixed(2) + '%';
+        }
 
-            document.getElementById('yearFlow').textContent = formatMoney(yearFlow);
-            document.getElementById('assetGrowth').textContent = assetGrowth.toFixed(2) + '%';
-            document.getElementById('assetGrowth').style.color = assetGrowth >= 0 ? '#16a34a' : '#dc2626';
+        // 打开添加模态框
+        function openAddModal() {
+            const categorySelect = document.getElementById('newItemCategory');
+            categorySelect.innerHTML = '';
+            Object.keys(categoryConfig).forEach(cat => {
+                categorySelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
 
-            const monthlyProfits = [];
-            let totalProfitMonths = 0;
-            let maxProfit = -Infinity;
-            let maxProfitMonth = 0;
+            document.getElementById('newItemName').value = '';
+            document.getElementById('newItemAmount').value = '';
+            document.getElementById('addModal').classList.add('active');
+        }
 
-            for (let m = 1; m <= 12; m++) {
-                const profit = getTotalProfit(year, m, m);
-                monthlyProfits.push({ month: m, profit: profit });
-                if (profit !== 0) {
-                    totalProfitMonths++;
-                    if (profit > maxProfit) {
-                        maxProfit = profit;
-                        maxProfitMonth = m;
-                    }
-                }
+        // 关闭模态框
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        // 添加新科目
+        function addNewItem() {
+            const name = document.getElementById('newItemName').value.trim();
+            const category = document.getElementById('newItemCategory').value;
+            const risk = document.getElementById('newItemRisk').value;
+            const amount = parseFloat(document.getElementById('newItemAmount').value) || 0;
+
+            if (!name) {
+                showToast('请输入科目名称');
+                return;
             }
 
-            const avgProfit = totalProfitMonths > 0 ? yearProfit / totalProfitMonths : 0;
-            document.getElementById('avgMonthlyProfit').textContent = formatMoney(avgProfit);
-            document.getElementById('maxMonthlyProfit').textContent = maxProfit > -Infinity ? formatMoney(maxProfit) : '¥0';
-            document.getElementById('maxMonthDetail').textContent = maxProfit > -Infinity ? `${year}年${maxProfitMonth}月` : '-';
+            const newId = Math.max(...configData.map(i => i.id), 0) + 1;
+            configData.push({
+                id: newId,
+                name: name,
+                category: category,
+                risk: risk,
+                initialAmount: amount,
+                monthlyData: {}
+            });
 
-            updateBarChart(year, monthlyProfits);
-            updateMonthlyCards(monthlyProfits, startMonth, endMonth);
-            updatePieChart();
-            renderTargetGrid();
-            showValidationWarnings();
+            saveToStorage();
+            closeModal('addModal');
+            renderAll();
+            showToast('添加成功');
         }
-        
-        function updateBarChart(year, monthlyProfits) {
-            const labels = monthlyProfits.map(d => d.month + '月');
-            const data = monthlyProfits.map(d => d.profit);
-            const colors = monthlyProfits.map(d => d.profit >= 0 ? 'rgba(220, 38, 38, 0.7)' : 'rgba(22, 163, 74, 0.7)');
-            
-            if (barChart) {
-                barChart.data.labels = labels;
-                barChart.data.datasets[0].data = data;
-                barChart.data.datasets[0].backgroundColor = colors;
-                barChart.update();
-            } else {
-                const ctx = document.getElementById('barChart').getContext('2d');
-                barChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: '月度收益 (¥)',
-                            data: data,
-                            backgroundColor: colors,
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: (ctx) => formatMoney(ctx.parsed.y)
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: (value) => '¥' + formatNumber(value)
-                                }
-                            }
-                        }
-                    }
-                });
+
+        // 格式化金额
+        function formatMoney(value) {
+            return '¥' + value.toLocaleString('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        }
+
+        function formatMoneyShort(value) {
+            if (value >= 10000) {
+                return (value / 10000).toFixed(1) + '万';
             }
+            return value.toLocaleString('zh-CN');
         }
-        
-        function updateMonthlyCards(monthlyProfits, startMonth, endMonth) {
-            const container = document.getElementById('monthlyStats');
-            
-            container.innerHTML = monthlyProfits.map(d => {
-                const isActive = d.month >= startMonth && d.month <= endMonth;
-                return `
-                    <div class="month-card ${isActive ? 'active' : ''}" onclick="selectStatsMonth(${d.month})">
-                        <div class="month-name">${d.month}月</div>
-                        <div class="month-value ${d.profit > 0 ? 'positive' : d.profit < 0 ? 'negative' : ''}">
-                            ${d.profit !== 0 ? formatMoney(d.profit) : '-'}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+
+        // Toast提示
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
         }
-        
-        function selectStatsMonth(month) {
-            setStatsMode('single');
-            document.getElementById('statsMonth').value = month;
-            updateStats();
-        }
-        
-        function updatePieChart() {
-            const leaves = getLeafNodes(configData);
-            const latest = getLatestDataMonth();
-            
-            const labels = leaves.map(item => item.accountPlan || item.category || item.accountType || '未命名');
-            const data = leaves.map(item => getNodeAmountAtMonth(item, latest.year, latest.month));
-            
-            const colors = leaves.map(item => {
-                const rootType = findRootAccountType(configData, item.id);
-                switch (rootType) {
-                    case '现金账户': return '#86efac';
-                    case '安全账户': return '#93c5fd';
-                    case '风险账户': return '#fcd34d';
-                    case '投机账户': return '#fca5a5';
-                    case '保险账户': return '#c4b5fd';
-                    default: return '#cbd5e1';
+
+        // 点击模态框外部关闭
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
                 }
             });
-            
-            if (pieChart) {
-                pieChart.data.labels = labels;
-                pieChart.data.datasets[0].data = data;
-                pieChart.data.datasets[0].backgroundColor = colors;
-                pieChart.update();
-            } else {
-                const ctx = document.getElementById('pieChart').getContext('2d');
-                pieChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: colors,
-                            borderWidth: 2,
-                            borderColor: '#fff'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'right',
-                                labels: { padding: 12, usePointStyle: true, font: { size: 11 } }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: (ctx) => `${ctx.label}: ¥${formatNumber(ctx.raw)}`
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        }
-        
-        function recalculate() {
-            // 更新现状模式的显示月份
-            if (currentView === 'current') {
-                const latest = getLatestDataMonth();
-                displayYear = latest.year;
-                displayMonth = latest.month;
-                document.getElementById('viewBadge').textContent = `${displayYear}年${displayMonth}月`;
-            }
-            renderTable();
-            updateStats();
-            scheduleSave(); // 自动保存
-        }
-        
-        function resetAll() {
-            if (!confirm('确定重置所有配置吗？将清除所有数据（包括本地存储）！')) return;
+        });
 
-            // 清除本地存储
-            localStorage.removeItem(STORAGE_KEY);
-
-            configData = [
-                {
-                    id: generateId(),
-                    accountType: '现金账户',
-                    riskLevel: '无风险',
-                    accountPlan: '日常开支',
-                    category: '活期存款',
-                    initialAmount: 500000,
-                    tools: '银行活期/货币基金',
-                    expectedReturn: 1.5,
-                    maxDrawdown: 0,
-                    monthlyData: {},
-                    children: []
-                },
-                {
-                    id: generateId(),
-                    accountType: '安全账户',
-                    riskLevel: '低风险',
-                    accountPlan: '保本增值',
-                    category: '储蓄保险',
-                    initialAmount: 1500000,
-                    tools: '年金险/增额寿险',
-                    expectedReturn: 4,
-                    maxDrawdown: 0,
-                    monthlyData: {},
-                    children: []
-                },
-                {
-                    id: generateId(),
-                    accountType: '风险账户',
-                    riskLevel: '中高风险',
-                    accountPlan: '财富增值',
-                    category: '权益投资',
-                    initialAmount: 3000000,
-                    tools: '基金/股票',
-                    expectedReturn: 10,
-                    maxDrawdown: 15,
-                    monthlyData: {},
-                    children: []
-                }
-            ];
-
-            // 重置目标配置比例
-            targetRatios = {
-                '现金账户': 10,
-                '安全账户': 30,
-                '风险账户': 60,
-                '投机账户': 0,
-                '保险账户': 0
-            };
-
-            document.getElementById('initialAsset').value = 5000000;
-            document.getElementById('startYear').value = new Date().getFullYear();
-            document.getElementById('startMonth').value = 1;
-            switchView('current');
-            recalculate();
-            showToast('已重置为默认配置', 'success');
-        }
-        
-        function exportData() {
-            const data = {
-                initialAsset: parseFloat(document.getElementById('initialAsset').value),
-                startYear: parseInt(document.getElementById('startYear').value),
-                startMonth: parseInt(document.getElementById('startMonth').value),
-                configData: configData,
-                targetRatios: targetRatios,
-                exportTime: new Date().toISOString()
-            };
-
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `资产配置_${new Date().toISOString().slice(0, 10)}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-
-            showToast('导出成功！', 'success');
-        }
-        
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            document.getElementById('toastMessage').textContent = message;
-            toast.className = 'toast ' + type + ' show';
-            setTimeout(() => toast.classList.remove('show'), 2000);
-        }
-        
-        window.onload = function() {
-            // 尝试从本地存储加载数据
-            const loaded = loadFromLocalStorage();
-            if (loaded) {
-                showToast('已从本地恢复数据', 'success');
-            }
-
-            const now = new Date();
-            entryMonth = now.getMonth() + 1;
-            document.getElementById('entryMonth').value = entryMonth;
-            document.getElementById('statsEndMonth').value = entryMonth;
-
-            // 设置历史月份选择器的默认值为最新有数据的月份
-            const latest = getLatestDataMonth();
-            document.getElementById('viewYear').value = latest.year;
-            document.getElementById('viewMonth').value = latest.month;
-
-            recalculate();
-            updateStorageStatus(true);
-        };
+        // 更新统计数据
+        setInterval(updateStats, 1000);
+        setTimeout(updateStats, 100);
     </script>
-
-
-</body></html>
+</body>
+</html>
